@@ -148,7 +148,8 @@ impl RollingMax {
     }
 
     pub fn update(&mut self, new_val: f64) -> f64 {
-        let (old_val, new_val) = self.container.update(new_val);
+        let old_val = self.container.head();
+        self.container.update(new_val);
 
         if new_val.is_nan() {
             self.nan_count += 1;
@@ -186,7 +187,8 @@ impl RollingMin {
     }
 
     pub fn update(&mut self, new_val: f64) -> f64 {
-        let (old_val, new_val) = self.container.update(new_val);
+        let old_val = self.container.head();
+        self.container.update(new_val);
 
         if new_val.is_nan() {
             self.nan_count += 1;
