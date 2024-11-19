@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 
 // Opened or Closed Position
 #[pyclass]
-#[derive(Debug, Clone)]
+#[derive(Debug,Clone, Copy)]
 pub struct Position {
     #[pyo3(get)]
     pub dt: i32,

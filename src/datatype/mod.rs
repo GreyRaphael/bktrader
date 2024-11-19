@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
-mod bar;
-mod trade;
-mod position;
+pub mod bar;
+pub mod trade;
+pub mod position;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let datatype = PyModule::new_bound(parent_module.py(), "datatype")?;
