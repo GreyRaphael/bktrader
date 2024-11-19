@@ -1,0 +1,124 @@
+use super::rolling::{Container, RollingSum};
+use pyo3::prelude::*;
+// Define a trait for moving averages
+
+#[pyclass]
+pub struct SMA {
+    sumer: RollingSum,
+}
+
+#[pymethods]
+impl SMA {
+    #[new]
+    pub fn new(period: usize) -> Self {
+        Self {
+            sumer: RollingSum::new(period),
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        self.sumer.update(new_val) / self.sumer.container.len() as f64
+    }
+}
+
+// WMA - Weighted Moving Average
+#[pyclass]
+pub struct WMA {
+    container: Container,
+    n: usize,
+    nan_count: usize,
+    sum: f64,
+    weighted_sum: f64,
+}
+
+#[pymethods]
+impl WMA {
+    #[new]
+    pub fn new(period: usize) -> Self {
+        Self {
+            container: Container::new(period),
+            n: period,
+            nan_count: period,
+            sum: 0.0,
+            weighted_sum: 0.0,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let old_val = self.container.head();
+        self.container.update(new_val);
+
+        if old_val.is_finite() {
+            self.weighted_sum -= self.sum;
+            self.sum -= old_val;
+        } else {
+            self.nan_count -= 1;
+        }
+
+        if new_val.is_finite() {
+            self.weighted_sum += new_val * self.n as f64;
+            self.sum += new_val;
+        } else {
+            self.nan_count += 1;
+        }
+
+        if self.nan_count > 0 {
+            f64::NAN
+        } else {
+            self.weighted_sum / (self.n * (self.n + 1)) as f64 * 2.0
+        }
+    }
+}
+
+#[pyclass]
+pub struct EMA {
+    alpha: f64,
+    ema: Option<f64>,
+}
+
+#[pymethods]
+impl EMA {
+    #[new]
+    pub fn new(period: usize) -> Self {
+        let alpha = 2.0 / (period as f64 + 1.0);
+        Self { alpha, ema: None }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        if new_val.is_finite() {
+            if let Some(prev_ema) = self.ema {
+                self.ema = Some(prev_ema * (1.0 - self.alpha) + new_val * self.alpha);
+            } else {
+                self.ema = Some(new_val);
+            }
+            self.ema.unwrap()
+        } else {
+            f64::NAN
+        }
+    }
+}
+
+enum MA {
+    Simple(SMA),
+    Weighted(WMA),
+    Exponential(EMA),
+}
+
+impl MA {
+    pub fn new(window: usize, method: &str) -> Self {
+        match method {
+            "sma" => MA::Simple(SMA::new(window)),
+            "wma" => MA::Weighted(WMA::new(window)),
+            "ema" => MA::Exponential(EMA::new(window)),
+            _ => panic!("Invalid method"),
+        }
+    }
+
+    fn update(&mut self, new_val: f64) -> f64 {
+        match self {
+            MA::Simple(sma) => sma.update(new_val),
+            MA::Weighted(wma) => wma.update(new_val),
+            MA::Exponential(ema) => ema.update(new_val),
+        }
+    }
+}

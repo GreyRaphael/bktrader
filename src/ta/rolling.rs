@@ -72,7 +72,7 @@ impl Container {
 
 #[pyclass]
 pub struct RollingSum {
-    container: Container,
+    pub container: Container,
     nan_count: usize,
     sum: f64,
 }
@@ -92,16 +92,16 @@ impl RollingSum {
         let old_val = self.container.head();
         self.container.update(new_val);
 
-        if old_val.is_nan() || old_val.is_infinite() {
-            self.nan_count -= 1;
-        } else {
+        if old_val.is_finite() {
             self.sum -= old_val;
+        } else {
+            self.nan_count -= 1;
         }
 
-        if new_val.is_nan() || new_val.is_infinite() {
-            self.nan_count += 1;
-        } else {
+        if new_val.is_finite() {
             self.sum += new_val;
+        } else {
+            self.nan_count += 1;
         }
 
         if self.nan_count > 0 {
@@ -109,25 +109,6 @@ impl RollingSum {
         } else {
             self.sum
         }
-    }
-}
-
-#[pyclass]
-pub struct RollingMean {
-    sumer: RollingSum,
-}
-
-#[pymethods]
-impl RollingMean {
-    #[new]
-    pub fn new(n: usize) -> Self {
-        Self {
-            sumer: RollingSum::new(n),
-        }
-    }
-
-    pub fn update(&mut self, new_val: f64) -> f64 {
-        self.sumer.update(new_val) / self.sumer.container.len() as f64
     }
 }
 
