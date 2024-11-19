@@ -14,6 +14,7 @@ pub struct EtfBroker {
     positions: VecDeque<Position>,
     #[pyo3(get)]
     trades: Vec<Trade>,
+    #[pyo3(get)]
     total_commission: f64,
 }
 
@@ -117,8 +118,8 @@ impl EtfBroker {
     ) {
         let order_vol = match (volume, amount) {
             (Some(vol), _) => vol,
-            (_, Some(amt)) => amt / price,
-            _ => 0.0,
+            (None, Some(amt)) => amt / price,
+            (None, None) => 0.0,
         };
 
         match signal {
@@ -179,6 +180,6 @@ impl EtfBroker {
     }
 
     fn loss_commission(&self) -> f64 {
-        self.total_commission / self.init_cash - 1.0
+        self.total_commission / self.init_cash
     }
 }
