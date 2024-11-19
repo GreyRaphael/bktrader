@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 
 // Opened or Closed Position
 #[pyclass]
-#[derive(Debug,Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Position {
     #[pyo3(get)]
     pub dt: i32,
@@ -16,11 +16,7 @@ pub struct Position {
 impl Position {
     #[new]
     fn new(dt: i32, price: f64, volume: f64) -> Self {
-        Position {
-            dt,
-            price,
-            volume,
-        }
+        Position { dt, price, volume }
     }
 
     fn __repr__(&self) -> String {
