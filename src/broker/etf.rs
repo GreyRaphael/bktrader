@@ -14,30 +14,30 @@ pub struct EtfBroker {
     positions: VecDeque<Position>,
     #[pyo3(get)]
     trades: Vec<Trade>,
-    total_charge: f64,
+    total_commission: f64,
 }
 
 impl EtfBroker {
     fn charge(&mut self, deal_amount: f64) -> f64 {
         let commission = self.ftc.max(deal_amount * self.ptc);
-        self.total_charge += commission;
+        self.total_commission += commission;
         commission
     }
 
     fn buy(&mut self, bar: &Bar, price: f64, volume: f64) {
-        let position = Position {
-            dt: bar.dt,
-            price,
-            volume,
-        };
-        println!("buy {:?}", position);
-        self.positions.push_back(position);
-        self.trades.push(Trade {
-            code: bar.code,
+        self.positions.push_back(Position {
             dt: bar.dt,
             price,
             volume,
         });
+        let trade = Trade {
+            code: bar.code,
+            dt: bar.dt,
+            price,
+            volume,
+        };
+        println!("buy {:?}", trade);
+        self.trades.push(trade);
 
         let deal_amount = price * volume;
         self.cash -= deal_amount + self.charge(deal_amount);
@@ -71,7 +71,7 @@ impl EtfBroker {
             code: bar.code,
             dt: bar.dt,
             price,
-            volume: -1.0 * volume,
+            volume: -1.0 * sold_vol,
         };
         println!("sell {:?}", trade);
         self.trades.push(trade);
@@ -82,7 +82,7 @@ impl EtfBroker {
 
     fn close_out(&mut self, bar: &Bar, price: f64) {
         // sell all
-        let total_vol = self.positions_sum() as f64;
+        let total_vol = self.positions_sum();
         self.sell(bar, price, total_vol);
     }
 }
@@ -91,7 +91,7 @@ impl EtfBroker {
 impl EtfBroker {
     #[new]
     #[pyo3(signature = (init_cash=5e4, ftc=5.0, ptc=1.5e-4))]
-    pub fn new(init_cash: f64, ftc: f64, ptc: f64) -> Self {
+    fn new(init_cash: f64, ftc: f64, ptc: f64) -> Self {
         Self {
             init_cash,
             cash: init_cash,
@@ -102,12 +102,12 @@ impl EtfBroker {
             ptc,
             positions: VecDeque::with_capacity(10),
             trades: Vec::with_capacity(30),
-            total_charge: 0.0,
+            total_commission: 0.0,
         }
     }
 
     #[pyo3(signature = (bar, signal, price, volume=None, amount=None))]
-    pub fn execute_order(
+    fn execute_order(
         &mut self,
         bar: &Bar,
         signal: u8,
@@ -129,56 +129,56 @@ impl EtfBroker {
                 // hold
             }
         }
-        let total_vol = self.positions_sum() as f64;
-        self.portfolio_value = self.cash + total_vol * (bar.close as f64);
+
+        self.portfolio_value = self.cash + self.positions_sum() * (bar.close as f64);
     }
 
-    pub fn positions_front(&self)->Option<Position>{
+    fn positions_front(&self) -> Option<Position> {
         self.positions.front().copied()
     }
 
-    pub fn positions_back(&self) -> Option<Position> {
+    fn positions_back(&self) -> Option<Position> {
         self.positions.back().copied()
     }
 
-    pub fn positions_len(&self) -> usize {
+    fn positions_len(&self) -> usize {
         self.positions.len()
     }
 
-    pub fn positions_sum(&self) -> f64 {
-        self.positions.iter().map(|pos|pos.volume).sum()
+    fn positions_sum(&self) -> f64 {
+        self.positions.iter().map(|pos| pos.volume).sum()
     }
 
     /// Get a list of all elements
-    pub fn positions_list(&self) -> Vec<Position> {
+    fn positions_list(&self) -> Vec<Position> {
         self.positions.iter().cloned().collect()
     }
 
-    pub fn closed_position_num(&self) -> usize {
-        let history_position_num= self.trades.iter().filter(|t|t.volume>0.0).count();
-        let opened_position_num = self.positions.len();
-        let closed_position_num= history_position_num - opened_position_num;
+    fn closed_position_num(&self) -> usize {
+        let history_position_num = self.trades.iter().filter(|t| t.volume > 0.0).count();
+        let opened_position_num = self.positions_len();
+        let closed_position_num = history_position_num - opened_position_num;
         closed_position_num
     }
 
-    pub fn profit_net(&self) -> f64 {
+    fn profit_net(&self) -> f64 {
         self.portfolio_value / self.init_cash - 1.0
     }
 
-    pub fn profit_gross(&self) -> f64 {
-        self.profit_net() + self.total_charge
+    fn profit_gross(&self) -> f64 {
+        self.profit_net() + self.loss_commission()
     }
 
-    pub fn loss_net(&self) -> f64 {
+    fn loss_net(&self) -> f64 {
         self.loss_gross() + self.loss_commission()
     }
 
-    pub fn loss_gross(&self) -> f64 {
+    fn loss_gross(&self) -> f64 {
         // todo
         0.0
     }
 
-    pub fn loss_commission(&self) -> f64 {
-        self.total_charge / self.init_cash - 1.0
+    fn loss_commission(&self) -> f64 {
+        self.total_commission / self.init_cash - 1.0
     }
 }
