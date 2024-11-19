@@ -1,0 +1,208 @@
+use pyo3::prelude::*;
+
+pub struct ContainerIter<'a> {
+    buf: &'a [f64],
+    idx: usize,
+    remaining: usize,
+}
+
+impl<'a> Iterator for ContainerIter<'a> {
+    type Item = &'a f64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining == 0 {
+            None
+        } else {
+            let item = &self.buf[self.idx];
+            self.idx = (self.idx + 1) % self.buf.len();
+            self.remaining -= 1;
+            Some(item)
+        }
+    }
+}
+
+pub struct Container {
+    buf: Vec<f64>,
+    head_idx: usize,
+    tail_idx: usize,
+}
+
+impl Container {
+    pub fn new(n: usize) -> Self {
+        Self {
+            buf: vec![f64::NAN; n],
+            head_idx: 0,
+            tail_idx: 0,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> (f64, f64) {
+        self.tail_idx = self.head_idx;
+        self.buf[self.tail_idx] = new_val;
+        self.head_idx = (self.head_idx + 1) % self.buf.len();
+
+        (self.buf[self.head_idx], self.buf[self.tail_idx])
+    }
+
+    pub fn get(&self, idx: usize) -> f64 {
+        // idx=0 is head; idx=n-1 is tail
+        self.buf[(self.head_idx + idx) % self.buf.len()]
+    }
+
+    pub fn head(&self) -> f64 {
+        self.buf[self.head_idx]
+    }
+
+    pub fn tail(&self) -> f64 {
+        self.buf[self.tail_idx]
+    }
+
+    pub fn len(&self) -> usize {
+        self.buf.len()
+    }
+
+    pub fn iter(&self) -> ContainerIter<'_> {
+        ContainerIter {
+            buf: &self.buf,
+            idx: self.head_idx,
+            remaining: self.buf.len(),
+        }
+    }
+}
+
+#[pyclass]
+pub struct RollingSum {
+    container: Container,
+    nan_count: usize,
+    sum: f64,
+}
+
+#[pymethods]
+impl RollingSum {
+    #[new]
+    pub fn new(n: usize) -> Self {
+        Self {
+            container: Container::new(n),
+            nan_count: n,
+            sum: 0.0,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let old_val = self.container.head();
+        self.container.update(new_val);
+
+        if old_val.is_nan() || old_val.is_infinite() {
+            self.nan_count -= 1;
+        } else {
+            self.sum -= old_val;
+        }
+
+        if new_val.is_nan() || new_val.is_infinite() {
+            self.nan_count += 1;
+        } else {
+            self.sum += new_val;
+        }
+
+        if self.nan_count > 0 {
+            f64::NAN
+        } else {
+            self.sum
+        }
+    }
+}
+
+#[pyclass]
+pub struct RollingMean {
+    sumer: RollingSum,
+}
+
+#[pymethods]
+impl RollingMean {
+    #[new]
+    pub fn new(n: usize) -> Self {
+        Self {
+            sumer: RollingSum::new(n),
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        self.sumer.update(new_val) / self.sumer.container.len() as f64
+    }
+}
+
+#[pyclass]
+pub struct RollingMax {
+    container: Container,
+    nan_count: usize,
+}
+
+#[pymethods]
+impl RollingMax {
+    #[new]
+    pub fn new(n: usize) -> Self {
+        Self {
+            container: Container::new(n),
+            nan_count: n,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let (old_val, new_val) = self.container.update(new_val);
+
+        if new_val.is_nan() {
+            self.nan_count += 1;
+        }
+
+        if old_val.is_nan() {
+            self.nan_count -= 1;
+        }
+
+        if self.nan_count > 0 {
+            f64::NAN
+        } else {
+            self.container.iter().fold(
+                f64::NAN,
+                |cur_max, x| if *x <= cur_max { cur_max } else { *x },
+            )
+        }
+    }
+}
+
+#[pyclass]
+pub struct RollingMin {
+    container: Container,
+    nan_count: usize,
+}
+
+#[pymethods]
+impl RollingMin {
+    #[new]
+    pub fn new(n: usize) -> Self {
+        Self {
+            container: Container::new(n),
+            nan_count: n,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let (old_val, new_val) = self.container.update(new_val);
+
+        if new_val.is_nan() {
+            self.nan_count += 1;
+        }
+
+        if old_val.is_nan() {
+            self.nan_count -= 1;
+        }
+
+        if self.nan_count > 0 {
+            f64::NAN
+        } else {
+            self.container.iter().fold(
+                f64::NAN,
+                |cur_min, x| if *x >= cur_min { cur_min } else { *x },
+            )
+        }
+    }
+}
