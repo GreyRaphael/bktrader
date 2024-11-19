@@ -1,6 +1,5 @@
 use super::rolling::{Container, RollingSum};
 use pyo3::prelude::*;
-// Define a trait for moving averages
 
 #[pyclass]
 pub struct SMA {
@@ -98,27 +97,35 @@ impl EMA {
     }
 }
 
-enum MA {
+#[pyclass]
+pub struct MA {
+    inner: MAType,
+}
+
+enum MAType {
     Simple(SMA),
     Weighted(WMA),
     Exponential(EMA),
 }
 
+#[pymethods]
 impl MA {
+    #[new]
     pub fn new(window: usize, method: &str) -> Self {
-        match method {
-            "sma" => MA::Simple(SMA::new(window)),
-            "wma" => MA::Weighted(WMA::new(window)),
-            "ema" => MA::Exponential(EMA::new(window)),
+        let inner = match method {
+            "sma" => MAType::Simple(SMA::new(window)),
+            "wma" => MAType::Weighted(WMA::new(window)),
+            "ema" => MAType::Exponential(EMA::new(window)),
             _ => panic!("Invalid method"),
-        }
+        };
+        MA { inner }
     }
 
-    fn update(&mut self, new_val: f64) -> f64 {
-        match self {
-            MA::Simple(sma) => sma.update(new_val),
-            MA::Weighted(wma) => wma.update(new_val),
-            MA::Exponential(ema) => ema.update(new_val),
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        match &mut self.inner {
+            MAType::Simple(sma) => sma.update(new_val),
+            MAType::Weighted(wma) => wma.update(new_val),
+            MAType::Exponential(ema) => ema.update(new_val),
         }
     }
 }
