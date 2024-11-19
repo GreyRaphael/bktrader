@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 
 #[pyclass]
 pub struct EtfBroker {
-    init_cash: f64,
+    pub init_cash: f64,
     #[pyo3(get)]
     pub cash: f64,
     #[pyo3(get)]
@@ -92,7 +92,7 @@ impl EtfBroker {
 impl EtfBroker {
     #[new]
     #[pyo3(signature = (init_cash=5e4, ftc=5.0, ptc=1.5e-4))]
-    fn new(init_cash: f64, ftc: f64, ptc: f64) -> Self {
+    pub fn new(init_cash: f64, ftc: f64, ptc: f64) -> Self {
         Self {
             init_cash,
             cash: init_cash,
@@ -108,7 +108,7 @@ impl EtfBroker {
     }
 
     #[pyo3(signature = (bar, signal, price, volume=None, amount=None))]
-    fn execute_order(
+    pub fn execute_order(
         &mut self,
         bar: &Bar,
         signal: u8,
@@ -134,52 +134,52 @@ impl EtfBroker {
         self.portfolio_value = self.cash + self.positions_sum() * (bar.close as f64);
     }
 
-    fn positions_front(&self) -> Option<Position> {
+    pub fn positions_front(&self) -> Option<Position> {
         self.positions.front().copied()
     }
 
-    fn positions_back(&self) -> Option<Position> {
+    pub fn positions_back(&self) -> Option<Position> {
         self.positions.back().copied()
     }
 
-    fn positions_len(&self) -> usize {
+    pub fn positions_len(&self) -> usize {
         self.positions.len()
     }
 
-    fn positions_sum(&self) -> f64 {
+    pub fn positions_sum(&self) -> f64 {
         self.positions.iter().map(|pos| pos.volume).sum()
     }
 
     /// Get a list of all elements
-    fn positions_list(&self) -> Vec<Position> {
+    pub fn positions_list(&self) -> Vec<Position> {
         self.positions.iter().cloned().collect()
     }
 
-    fn closed_position_num(&self) -> usize {
+    pub fn closed_position_num(&self) -> usize {
         let history_position_num = self.trades.iter().filter(|t| t.volume > 0.0).count();
         let opened_position_num = self.positions_len();
         let closed_position_num = history_position_num - opened_position_num;
         closed_position_num
     }
 
-    fn profit_net(&self) -> f64 {
+    pub fn profit_net(&self) -> f64 {
         self.portfolio_value / self.init_cash - 1.0
     }
 
-    fn profit_gross(&self) -> f64 {
+    pub fn profit_gross(&self) -> f64 {
         self.profit_net() + self.loss_commission()
     }
 
-    fn loss_net(&self) -> f64 {
+    pub fn loss_net(&self) -> f64 {
         self.loss_gross() + self.loss_commission()
     }
 
-    fn loss_gross(&self) -> f64 {
+    pub fn loss_gross(&self) -> f64 {
         // todo
         0.0
     }
 
-    fn loss_commission(&self) -> f64 {
+    pub fn loss_commission(&self) -> f64 {
         self.total_commission / self.init_cash
     }
 }
