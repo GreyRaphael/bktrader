@@ -86,8 +86,10 @@ impl EtfBroker {
 
         let deal_amount = price * sold_vol;
         self.cash += deal_amount - self.charge(deal_amount);
+    }
 
-        // self.portfolio_value = self.cash + self.positions_sum() * (bar.close as f64);
+    pub fn update_portfolio_value(&mut self, bar: &Bar) {
+        self.portfolio_value = self.cash + self.positions_sum() * (bar.close as f64);
     }
 
     pub fn active_position_first(&self) -> Option<Position> {
