@@ -26,9 +26,9 @@ pub struct Position {
 #[pymethods]
 impl Position {
     #[new]
-    pub fn new(id: u32, entry_dt: i32, entry_price: f64, volume: f64) -> Self {
+    pub fn new(entry_dt: i32, entry_price: f64, volume: f64) -> Self {
         Position {
-            id,
+            id: 0,
             entry_dt,
             exit_dt: None,
             entry_price,

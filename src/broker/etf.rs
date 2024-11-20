@@ -11,11 +11,13 @@ pub struct EtfBroker {
     pub portfolio_value: f64,
     ftc: f64,
     ptc: f64,
-    positions: BTreeMap<u32, Position>,
+    active_positions: BTreeMap<u32, Position>,
+    closed_positions: Vec<Position>,
     #[pyo3(get)]
     trades: Vec<Trade>,
     #[pyo3(get)]
     total_commission: f64,
+    position_id: u32,
 }
 
 impl EtfBroker {
@@ -26,8 +28,8 @@ impl EtfBroker {
     }
 
     fn buy(&mut self, bar: &Bar, price: f64, volume: f64) {
-        self.positions
-            .insert(0, Position::new(0, bar.dt, price, volume));
+        self.active_positions
+            .insert(0, Position::new(bar.dt, price, volume));
         let trade = Trade {
             code: bar.code,
             dt: bar.dt,
@@ -46,13 +48,13 @@ impl EtfBroker {
         let mut sold_vol = 0.0;
 
         while remaining_vol > 0.0 {
-            if let Some((first_key, mut pos)) = self.positions.pop_first() {
+            if let Some((first_key, mut pos)) = self.active_positions.pop_first() {
                 if pos.volume > remaining_vol {
                     // Partial sell from the front position
                     pos.volume -= remaining_vol;
                     sold_vol += remaining_vol;
                     remaining_vol = 0.0;
-                    self.positions.insert(first_key, pos);
+                    self.active_positions.insert(first_key, pos);
                 } else {
                     // Sell entire front position
                     sold_vol += pos.volume;
@@ -98,10 +100,42 @@ impl EtfBroker {
             ftc,
             //  proportional transaction costs per trade (buy or sell)
             ptc,
-            positions: BTreeMap::new(),
+            active_positions: BTreeMap::new(),
+            closed_positions: Vec::with_capacity(30),
             trades: Vec::with_capacity(30),
             total_commission: 0.0,
+            position_id: 0,
         }
+    }
+
+    pub fn entry(&mut self, position: Position) {
+        self.active_positions.insert(self.position_id, position);
+    }
+
+    pub fn exit(&mut self, position_ids: Vec<u32>, price: f64) {
+        // Initialize the total sold volume
+        let mut sold_vol = 0.0;
+
+        // Iterate over position IDs to process each position
+        for position_id in position_ids {
+            // Remove the position from the active positions map
+            if let Some(mut pos) = self.active_positions.remove(&position_id) {
+                // Accumulate the volume of the sold position
+                sold_vol += pos.volume;
+
+                // Update the status of the position to 'closed'
+                pos.status = 2;
+
+                // Add the closed position to the closed_positions list
+                self.closed_positions.push(pos);
+            }
+        }
+
+        // Calculate the total deal amount based on the sold volume and price
+        let deal_amount = price * sold_vol;
+
+        // Update the cash balance after deducting any charges
+        self.cash += deal_amount - self.charge(deal_amount);
     }
 
     #[pyo3(signature = (bar, signal, price, volume=None, amount=None))]
@@ -132,24 +166,28 @@ impl EtfBroker {
     }
 
     pub fn positions_front(&self) -> Option<Position> {
-        self.positions.first_key_value().map(|(_, v)| v.clone())
+        self.active_positions
+            .first_key_value()
+            .map(|(_, v)| v.clone())
     }
 
     pub fn positions_back(&self) -> Option<Position> {
-        self.positions.last_key_value().map(|(_, v)| v.clone())
+        self.active_positions
+            .last_key_value()
+            .map(|(_, v)| v.clone())
     }
 
     pub fn positions_len(&self) -> usize {
-        self.positions.len()
+        self.active_positions.len()
     }
 
     pub fn positions_sum(&self) -> f64 {
-        self.positions.values().map(|pos| pos.volume).sum()
+        self.active_positions.values().map(|pos| pos.volume).sum()
     }
 
     /// Get a list of all elements
     pub fn positions_list(&self) -> Vec<Position> {
-        self.positions.values().cloned().collect()
+        self.active_positions.values().cloned().collect()
     }
 
     pub fn closed_position_num(&self) -> usize {
