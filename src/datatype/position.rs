@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 #[pyclass]
 #[derive(Debug, Clone, Copy)]
 pub struct Position {
+    pub id: u32,
     #[pyo3(get)]
     pub entry_dt: i32,
     #[pyo3(get)]
@@ -25,8 +26,9 @@ pub struct Position {
 #[pymethods]
 impl Position {
     #[new]
-    pub fn new(entry_dt: i32, entry_price: f64, volume: f64) -> Self {
+    pub fn new(id: u32, entry_dt: i32, entry_price: f64, volume: f64) -> Self {
         Position {
+            id,
             entry_dt,
             exit_dt: None,
             entry_price,

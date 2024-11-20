@@ -1,6 +1,6 @@
 use crate::datatype::{bar::Bar, position::Position, trade::Trade};
 use pyo3::prelude::*;
-use std::collections::VecDeque;
+use std::collections::BTreeMap;
 
 #[pyclass]
 pub struct EtfBroker {
@@ -11,7 +11,7 @@ pub struct EtfBroker {
     pub portfolio_value: f64,
     ftc: f64,
     ptc: f64,
-    positions: VecDeque<Position>,
+    positions: BTreeMap<u32, Position>,
     #[pyo3(get)]
     trades: Vec<Trade>,
     #[pyo3(get)]
@@ -26,7 +26,8 @@ impl EtfBroker {
     }
 
     fn buy(&mut self, bar: &Bar, price: f64, volume: f64) {
-        self.positions.push_back(Position::new(bar.dt, price, volume));
+        self.positions
+            .insert(0, Position::new(0, bar.dt, price, volume));
         let trade = Trade {
             code: bar.code,
             dt: bar.dt,
@@ -45,17 +46,17 @@ impl EtfBroker {
         let mut sold_vol = 0.0;
 
         while remaining_vol > 0.0 {
-            if let Some(front) = self.positions.front_mut() {
-                if front.volume > remaining_vol {
+            if let Some((first_key, mut pos)) = self.positions.pop_first() {
+                if pos.volume > remaining_vol {
                     // Partial sell from the front position
-                    front.volume -= remaining_vol;
+                    pos.volume -= remaining_vol;
                     sold_vol += remaining_vol;
                     remaining_vol = 0.0;
+                    self.positions.insert(first_key, pos);
                 } else {
                     // Sell entire front position
-                    sold_vol += front.volume;
-                    remaining_vol -= front.volume;
-                    self.positions.pop_front();
+                    sold_vol += pos.volume;
+                    remaining_vol -= pos.volume;
                 }
             } else {
                 // No positions to sell; handle as needed (e.g., ignore, error, etc.)
@@ -97,7 +98,7 @@ impl EtfBroker {
             ftc,
             //  proportional transaction costs per trade (buy or sell)
             ptc,
-            positions: VecDeque::with_capacity(10),
+            positions: BTreeMap::new(),
             trades: Vec::with_capacity(30),
             total_commission: 0.0,
         }
@@ -131,11 +132,11 @@ impl EtfBroker {
     }
 
     pub fn positions_front(&self) -> Option<Position> {
-        self.positions.front().copied()
+        self.positions.first_key_value().map(|(_, v)| v.clone())
     }
 
     pub fn positions_back(&self) -> Option<Position> {
-        self.positions.back().copied()
+        self.positions.last_key_value().map(|(_, v)| v.clone())
     }
 
     pub fn positions_len(&self) -> usize {
@@ -143,12 +144,12 @@ impl EtfBroker {
     }
 
     pub fn positions_sum(&self) -> f64 {
-        self.positions.iter().map(|pos| pos.volume).sum()
+        self.positions.values().map(|pos| pos.volume).sum()
     }
 
     /// Get a list of all elements
     pub fn positions_list(&self) -> Vec<Position> {
-        self.positions.iter().cloned().collect()
+        self.positions.values().cloned().collect()
     }
 
     pub fn closed_position_num(&self) -> usize {
