@@ -108,11 +108,33 @@ impl EtfBroker {
         }
     }
 
-    pub fn entry(&mut self, position: Position) {
-        self.active_positions.insert(self.position_id, position);
+    #[pyo3(signature = (bar, price, volume, stop_loss=None, take_profit=None))]
+    pub fn entry(
+        &mut self,
+        bar: &Bar,
+        price: f64,
+        volume: f64,
+        stop_loss: Option<f64>,
+        take_profit: Option<f64>,
+    ) {
+        self.position_id += 1;
+        self.active_positions.insert(
+            self.position_id,
+            Position {
+                id: self.position_id,
+                entry_dt: bar.dt,
+                exit_dt: None,
+                entry_price: price,
+                exit_price: None,
+                stop_loss,
+                take_profit,
+                status: 1,
+                volume,
+            },
+        );
     }
 
-    pub fn exit(&mut self, position_ids: Vec<u32>, price: f64) {
+    pub fn exit(&mut self, bar: &Bar, position_ids: Vec<u32>, price: f64) {
         // Initialize the total sold volume
         let mut sold_vol = 0.0;
 
