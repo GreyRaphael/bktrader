@@ -26,11 +26,7 @@ impl EtfBroker {
     }
 
     fn buy(&mut self, bar: &Bar, price: f64, volume: f64) {
-        self.positions.push_back(Position {
-            dt: bar.dt,
-            price,
-            volume,
-        });
+        self.positions.push_back(Position::new(bar.dt, price, volume));
         let trade = Trade {
             code: bar.code,
             dt: bar.dt,

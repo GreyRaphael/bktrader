@@ -5,9 +5,19 @@ use pyo3::prelude::*;
 #[derive(Debug, Clone, Copy)]
 pub struct Position {
     #[pyo3(get)]
-    pub dt: i32,
+    pub entry_dt: i32,
     #[pyo3(get)]
-    pub price: f64,
+    pub exit_dt: Option<i32>,
+    #[pyo3(get)]
+    pub entry_price: f64,
+    #[pyo3(get)]
+    pub exit_price: Option<f64>,
+    #[pyo3(get)]
+    pub stop_loss: Option<f64>,
+    #[pyo3(get)]
+    pub take_profit: Option<f64>,
+    #[pyo3(get)]
+    pub status: u8, // 0 pending, 1 oepn, 2 close
     #[pyo3(get)]
     pub volume: f64,
 }
@@ -15,8 +25,17 @@ pub struct Position {
 #[pymethods]
 impl Position {
     #[new]
-    fn new(dt: i32, price: f64, volume: f64) -> Self {
-        Position { dt, price, volume }
+    pub fn new(entry_dt: i32, entry_price: f64, volume: f64) -> Self {
+        Position {
+            entry_dt,
+            exit_dt: None,
+            entry_price,
+            exit_price: None,
+            stop_loss: None,
+            take_profit: None,
+            status: 0,
+            volume,
+        }
     }
 
     fn __repr__(&self) -> String {

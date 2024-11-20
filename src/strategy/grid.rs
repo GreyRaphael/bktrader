@@ -41,27 +41,30 @@ impl SimpleGrid {
         let upper = baseline * (1.0 + self.point_percent);
         let lower = baseline * (1.0 - self.point_percent);
 
-        if self.broker.positions_len() >0 {
-
-        }
+        if self.broker.positions_len() > 0 {}
 
         // no opened positions
         if self.broker.positions_len() < self.max_positions_len {
-            if vwap> baseline {
-                self.broker.execute_order(bar, 1, vwap, Some(self.size), None);
+            if vwap > baseline {
+                self.broker
+                    .execute_order(bar, 1, vwap, Some(self.size), None);
             }
         }
 
-        if self.broker.positions_len() >0 {
+        if self.broker.positions_len() > 0 {
             for pos in self.broker.positions_list() {
-                if bar.high> pos.price {
-                    // change pos.price to take_profit
-                    self.broker.execute_order(bar, 2, pos.price, Some(pos.volume), None);
+                if let Some(tp) = pos.take_profit {
+                    if bar.high > tp {
+                        self.broker
+                            .execute_order(bar, 2, vwap, Some(pos.volume), None);
+                    }
                 }
 
-                if bar.low < pos.price {
-                    // change pos.price to stop_loss
-                    self.broker.execute_order(bar, 2, pos.price, Some(pos.volume), None);
+                if let Some(sl) = pos.stop_loss {
+                    if bar.low < sl {
+                        self.broker
+                            .execute_order(bar, 2, vwap, Some(pos.volume), None);
+                    }
                 }
             }
         }
