@@ -1,5 +1,13 @@
 use pyo3::prelude::*;
 
+#[pyclass(eq, eq_int)]
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum PositionStatus {
+    Pending,
+    Opened,
+    Closed,
+}
+
 // Opened or Closed Position
 #[pyclass]
 #[derive(Debug, Clone, Copy)]
@@ -18,7 +26,7 @@ pub struct Position {
     #[pyo3(get)]
     pub take_profit: Option<f64>,
     #[pyo3(get)]
-    pub status: u8, // 0 pending, 1 oepn, 2 close
+    pub status: PositionStatus,
     #[pyo3(get)]
     pub volume: f64,
 }
@@ -35,7 +43,7 @@ impl Position {
             exit_price: None,
             stop_loss: None,
             take_profit: None,
-            status: 0,
+            status: PositionStatus::Pending,
             volume,
         }
     }

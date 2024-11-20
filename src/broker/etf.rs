@@ -1,4 +1,4 @@
-use crate::datatype::{bar::Bar, position::Position};
+use crate::datatype::{bar::Bar, position::Position, position::PositionStatus};
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -62,7 +62,7 @@ impl EtfBroker {
             exit_price: None,
             stop_loss,
             take_profit,
-            status: 1,
+            status: PositionStatus::Opened,
             volume,
         };
         println!("entry {:?}", pos);
@@ -77,7 +77,7 @@ impl EtfBroker {
 
         for id in position_ids {
             if let Some(position) = self.positions.iter_mut().find(|pos| pos.id == id) {
-                position.status = 2;
+                position.status = PositionStatus::Closed;
                 position.exit_dt = Some(bar.dt);
                 position.exit_price = Some(price);
                 sold_vol += position.volume;
@@ -91,15 +91,24 @@ impl EtfBroker {
     }
 
     pub fn active_position_first(&self) -> Option<Position> {
-        self.positions.iter().find(|pos| pos.status == 1).copied()
+        self.positions
+            .iter()
+            .find(|pos| pos.status == PositionStatus::Opened)
+            .copied()
     }
 
     pub fn active_position_last(&self) -> Option<Position> {
-        self.positions.iter().rfind(|pos| pos.status == 1).copied()
+        self.positions
+            .iter()
+            .rfind(|pos| pos.status == PositionStatus::Opened)
+            .copied()
     }
 
     pub fn active_position_len(&self) -> usize {
-        self.positions.iter().filter(|pos| pos.status == 1).count()
+        self.positions
+            .iter()
+            .filter(|pos| pos.status == PositionStatus::Opened)
+            .count()
     }
 
     pub fn positions_sum(&self) -> f64 {
@@ -109,7 +118,7 @@ impl EtfBroker {
     pub fn active_positions(&self) -> Vec<Position> {
         self.positions
             .iter()
-            .filter(|pos| pos.status == 1)
+            .filter(|pos| pos.status == PositionStatus::Opened)
             .copied()
             .collect::<Vec<_>>()
     }
@@ -117,7 +126,7 @@ impl EtfBroker {
     pub fn closed_positions(&self) -> Vec<Position> {
         self.positions
             .iter()
-            .filter(|pos| pos.status == 2)
+            .filter(|pos| pos.status == PositionStatus::Closed)
             .copied()
             .collect::<Vec<_>>()
     }

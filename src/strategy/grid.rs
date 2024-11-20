@@ -1,7 +1,7 @@
 use crate::broker::etf::EtfBroker;
 use crate::datatype::bar::Bar;
+use crate::datatype::position::PositionStatus;
 use crate::ta::ma::MA;
-
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -45,7 +45,7 @@ impl SimpleGrid {
             .broker
             .positions
             .iter()
-            .filter(|pos| pos.status == 1)
+            .filter(|pos| pos.status == PositionStatus::Opened)
             .filter(|pos| (Some(bar.high) > pos.take_profit) || (Some(bar.low) < pos.stop_loss))
             .map(|pos| pos.id)
             .collect::<Vec<_>>();
