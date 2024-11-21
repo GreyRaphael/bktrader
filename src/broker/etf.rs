@@ -44,14 +44,7 @@ impl EtfBroker {
     }
 
     #[pyo3(signature = (bar, price, volume, stop_loss=None, take_profit=None))]
-    pub fn entry(
-        &mut self,
-        bar: &Bar,
-        price: f64,
-        volume: f64,
-        stop_loss: Option<f64>,
-        take_profit: Option<f64>,
-    ) {
+    pub fn entry(&mut self, bar: &Bar, price: f64, volume: f64, stop_loss: Option<f64>, take_profit: Option<f64>) -> u32 {
         let deal_amount = price * volume;
         let fees = self.charge(deal_amount);
         self.cash -= deal_amount + fees;
@@ -64,16 +57,14 @@ impl EtfBroker {
         println!("entry {:?}", pos);
 
         self.positions.push(pos);
+
+        // return position id
+        pos.id
     }
 
     pub fn exit(&mut self, bar: &Bar, position_ids: Vec<u32>, price: f64) {
         // position_id: index mapping in all positions
-        let position_map: HashMap<u32, usize> = self
-            .positions
-            .iter()
-            .enumerate()
-            .map(|(i, pos)| (pos.id, i))
-            .collect();
+        let position_map: HashMap<u32, usize> = self.positions.iter().enumerate().map(|(i, pos)| (pos.id, i)).collect();
 
         let mut sold_vol = 0.0;
         let mut indices_to_update = Vec::with_capacity(position_ids.len());
@@ -94,11 +85,7 @@ impl EtfBroker {
         self.cash += deal_amount - fees;
 
         // Calculate average fees
-        let avg_fees = if !indices_to_update.is_empty() {
-            fees / indices_to_update.len() as f64
-        } else {
-            0.0
-        };
+        let avg_fees = if !indices_to_update.is_empty() { fees / indices_to_update.len() as f64 } else { 0.0 };
 
         // Update fees and PnL for each position
         for &index in &indices_to_update {
@@ -114,24 +101,15 @@ impl EtfBroker {
     }
 
     pub fn active_position_first(&self) -> Option<Position> {
-        self.positions
-            .iter()
-            .find(|pos| pos.status == PositionStatus::Opened)
-            .copied()
+        self.positions.iter().find(|pos| pos.status == PositionStatus::Opened).copied()
     }
 
     pub fn active_position_last(&self) -> Option<Position> {
-        self.positions
-            .iter()
-            .rfind(|pos| pos.status == PositionStatus::Opened)
-            .copied()
+        self.positions.iter().rfind(|pos| pos.status == PositionStatus::Opened).copied()
     }
 
     pub fn active_position_len(&self) -> usize {
-        self.positions
-            .iter()
-            .filter(|pos| pos.status == PositionStatus::Opened)
-            .count()
+        self.positions.iter().filter(|pos| pos.status == PositionStatus::Opened).count()
     }
 
     pub fn active_positions_sum(&self) -> f64 {
@@ -145,19 +123,11 @@ impl EtfBroker {
     }
 
     pub fn active_positions(&self) -> Vec<Position> {
-        self.positions
-            .iter()
-            .filter(|pos| pos.status == PositionStatus::Opened)
-            .copied()
-            .collect()
+        self.positions.iter().filter(|pos| pos.status == PositionStatus::Opened).copied().collect()
     }
 
     pub fn closed_positions(&self) -> Vec<Position> {
-        self.positions
-            .iter()
-            .filter(|pos| pos.status == PositionStatus::Closed)
-            .copied()
-            .collect()
+        self.positions.iter().filter(|pos| pos.status == PositionStatus::Closed).copied().collect()
     }
 
     pub fn profit_net(&self) -> f64 {
