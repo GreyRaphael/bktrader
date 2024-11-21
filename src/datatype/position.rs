@@ -33,7 +33,7 @@ pub struct Position {
     #[pyo3(get)]
     pub volume: f64,
     #[pyo3(get)]
-    pub pnl: f64, // gross pnl without considering commissions
+    pub pnl: Option<f64>, // gross pnl without considering commissions
     #[pyo3(get)]
     pub fees: f64,
 }
@@ -53,7 +53,7 @@ impl Position {
             take_profit: None,
             status: PositionStatus::Opened,
             volume,
-            pnl: 0.0,
+            pnl: None,
             fees: 0.0,
         }
     }

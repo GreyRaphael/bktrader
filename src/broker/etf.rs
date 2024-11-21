@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use crate::datatype::{bar::Bar, position::Position, position::PositionStatus};
 use pyo3::prelude::*;
+use std::collections::HashMap;
 
 #[pyclass]
 pub struct EtfBroker {
@@ -15,14 +14,14 @@ pub struct EtfBroker {
     #[pyo3(get)]
     pub positions: Vec<Position>,
     #[pyo3(get)]
-    total_commission: f64,
+    total_fees: f64,
 }
 
 impl EtfBroker {
     fn charge(&mut self, deal_amount: f64) -> f64 {
-        let commission = self.ftc.max(deal_amount * self.ptc);
-        self.total_commission += commission;
-        commission
+        let fees = self.ftc.max(deal_amount * self.ptc);
+        self.total_fees += fees;
+        fees
     }
 }
 
@@ -40,7 +39,7 @@ impl EtfBroker {
             //  proportional transaction costs per trade (buy or sell)
             ptc,
             positions: Vec::with_capacity(100),
-            total_commission: 0.0,
+            total_fees: 0.0,
         }
     }
 
@@ -105,12 +104,13 @@ impl EtfBroker {
         for &index in &indices_to_update {
             let position = &mut self.positions[index];
             position.fees = avg_fees;
-            position.pnl = (price - position.entry_price) * position.volume;
+            position.fees += fees;
+            position.pnl = Some((price - position.entry_price) * position.volume);
         }
     }
 
     pub fn update_portfolio_value(&mut self, bar: &Bar) {
-        self.portfolio_value = self.cash + self.positions_sum() * (bar.close as f64);
+        self.portfolio_value = self.cash + self.active_positions_sum() * bar.close;
     }
 
     pub fn active_position_first(&self) -> Option<Position> {
@@ -134,8 +134,14 @@ impl EtfBroker {
             .count()
     }
 
-    pub fn positions_sum(&self) -> f64 {
-        self.positions.iter().map(|pos| pos.volume).sum()
+    pub fn active_positions_sum(&self) -> f64 {
+        let mut sum = 0.0;
+        for pos in &self.positions {
+            if pos.status == PositionStatus::Opened {
+                sum += pos.volume;
+            }
+        }
+        sum
     }
 
     pub fn active_positions(&self) -> Vec<Position> {
@@ -143,7 +149,7 @@ impl EtfBroker {
             .iter()
             .filter(|pos| pos.status == PositionStatus::Opened)
             .copied()
-            .collect::<Vec<_>>()
+            .collect()
     }
 
     pub fn closed_positions(&self) -> Vec<Position> {
@@ -151,7 +157,7 @@ impl EtfBroker {
             .iter()
             .filter(|pos| pos.status == PositionStatus::Closed)
             .copied()
-            .collect::<Vec<_>>()
+            .collect()
     }
 
     pub fn profit_net(&self) -> f64 {
@@ -159,11 +165,11 @@ impl EtfBroker {
     }
 
     pub fn profit_gross(&self) -> f64 {
-        self.profit_net() + self.loss_commission()
+        self.profit_net() + self.loss_fees()
     }
 
     pub fn loss_net(&self) -> f64 {
-        self.loss_gross() + self.loss_commission()
+        self.loss_gross() + self.loss_fees()
     }
 
     pub fn loss_gross(&self) -> f64 {
@@ -171,7 +177,7 @@ impl EtfBroker {
         0.0
     }
 
-    pub fn loss_commission(&self) -> f64 {
-        self.total_commission / self.init_cash
+    pub fn loss_fees(&self) -> f64 {
+        self.total_fees / self.init_cash
     }
 }
