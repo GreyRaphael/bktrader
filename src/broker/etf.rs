@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::datatype::{bar::Bar, position::Position, position::PositionStatus};
 use pyo3::prelude::*;
 
@@ -14,7 +16,6 @@ pub struct EtfBroker {
     pub positions: Vec<Position>,
     #[pyo3(get)]
     total_commission: f64,
-    position_id: u32,
 }
 
 impl EtfBroker {
@@ -40,7 +41,6 @@ impl EtfBroker {
             ptc,
             positions: Vec::with_capacity(100),
             total_commission: 0.0,
-            position_id: 0,
         }
     }
 
@@ -53,29 +53,60 @@ impl EtfBroker {
         stop_loss: Option<f64>,
         take_profit: Option<f64>,
     ) {
-        self.position_id += 1;
-        let pos = Position::new(bar.dt, price, volume);
-        println!("entry {:?}", pos);
-        self.positions.push(pos);
-
         let deal_amount = price * volume;
-        self.cash -= deal_amount + self.charge(deal_amount);
+        let fees = self.charge(deal_amount);
+        self.cash -= deal_amount + fees;
+
+        // open position
+        let mut pos = Position::new(bar.dt, price, volume);
+        pos.fees = fees;
+        pos.stop_loss = stop_loss;
+        pos.take_profit = take_profit;
+        println!("entry {:?}", pos);
+
+        self.positions.push(pos);
     }
 
     pub fn exit(&mut self, bar: &Bar, position_ids: Vec<u32>, price: f64) {
-        let mut sold_vol = 0.0;
+        // position_id: index mapping in all positions
+        let position_map: HashMap<u32, usize> = self
+            .positions
+            .iter()
+            .enumerate()
+            .map(|(i, pos)| (pos.id, i))
+            .collect();
 
+        let mut sold_vol = 0.0;
+        let mut indices_to_update = Vec::with_capacity(position_ids.len());
         for id in position_ids {
-            if let Some(position) = self.positions.iter_mut().find(|pos| pos.id == id) {
+            if let Some(&index) = position_map.get(&id) {
+                let position = &mut self.positions[index];
                 position.status = PositionStatus::Closed;
                 position.exit_dt = Some(bar.dt);
                 position.exit_price = Some(price);
                 sold_vol += position.volume;
-            };
+                indices_to_update.push(index);
+            }
         }
 
+        // Calculate deal amount and fees
         let deal_amount = price * sold_vol;
-        self.cash += deal_amount - self.charge(deal_amount);
+        let fees = self.charge(deal_amount);
+        self.cash += deal_amount - fees;
+
+        // Calculate average fees
+        let avg_fees = if !indices_to_update.is_empty() {
+            fees / indices_to_update.len() as f64
+        } else {
+            0.0
+        };
+
+        // Update fees and PnL for each position
+        for &index in &indices_to_update {
+            let position = &mut self.positions[index];
+            position.fees = avg_fees;
+            position.pnl = (price - position.entry_price) * position.volume;
+        }
     }
 
     pub fn update_portfolio_value(&mut self, bar: &Bar) {

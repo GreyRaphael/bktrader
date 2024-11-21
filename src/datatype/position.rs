@@ -33,7 +33,7 @@ pub struct Position {
     #[pyo3(get)]
     pub volume: f64,
     #[pyo3(get)]
-    pub pnl: f64,
+    pub pnl: f64, // gross pnl without considering commissions
     #[pyo3(get)]
     pub fees: f64,
 }
