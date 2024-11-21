@@ -17,17 +17,17 @@ impl Crosser {
         }
     }
 
-    pub fn update(&mut self, x: f64, y: f64) -> f64 {
+    pub fn update(&mut self, x: f64, y: f64) -> i8 {
         let (x_head, x_tail) = self.x_container.update(x);
         let (y_head, y_tail) = self.y_container.update(y);
         if (x_head > y_head) && (x_tail < y_tail) {
             // x cross down y
-            -1.0
+            -1
         } else if (x_head < y_head) && (x_tail > y_tail) {
             // x cross up y
-            1.0
+            1
         } else {
-            0.0
+            0
         }
     }
 }
