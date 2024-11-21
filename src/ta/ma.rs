@@ -1,6 +1,7 @@
 use super::rolling::{Container, RollingSum};
 use pyo3::prelude::*;
 
+// SMA - Simple Moving Average
 #[pyclass]
 pub struct SMA {
     sumer: RollingSum,
@@ -69,6 +70,7 @@ impl WMA {
     }
 }
 
+// EMA - Exponential Moving Average
 #[pyclass]
 pub struct EMA {
     alpha: f64,

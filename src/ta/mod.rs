@@ -10,5 +10,6 @@ pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     ta.add_class::<ma::SMA>()?;
     ta.add_class::<ma::WMA>()?;
     ta.add_class::<ma::EMA>()?;
+    ta.add_class::<ma::MA>()?;
     parent_module.add_submodule(&ta)
 }
