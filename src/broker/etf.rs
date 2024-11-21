@@ -54,17 +54,7 @@ impl EtfBroker {
         take_profit: Option<f64>,
     ) {
         self.position_id += 1;
-        let pos = Position {
-            id: self.position_id,
-            entry_dt: bar.dt,
-            exit_dt: None,
-            entry_price: price,
-            exit_price: None,
-            stop_loss,
-            take_profit,
-            status: PositionStatus::Opened,
-            volume,
-        };
+        let pos = Position::new(bar.dt, price, volume);
         println!("entry {:?}", pos);
         self.positions.push(pos);
 
