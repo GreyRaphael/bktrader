@@ -97,6 +97,34 @@ impl EMA {
     }
 }
 
+// RMA - Relative Moving Average, similar to EMA
+#[pyclass]
+pub struct RMA {
+    period: f64,
+    rma: Option<f64>,
+}
+
+#[pymethods]
+impl RMA {
+    #[new]
+    pub fn new(period: usize) -> Self {
+        Self { period: period as f64, rma: None }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        if new_val.is_finite() {
+            if let Some(prev_rma) = self.rma {
+                self.rma = Some((prev_rma * (self.period - 1.0) + new_val) / self.period);
+            } else {
+                self.rma = Some(new_val);
+            }
+            self.rma.unwrap()
+        } else {
+            f64::NAN
+        }
+    }
+}
+
 // HMA - Hull Moving Average
 #[pyclass]
 pub struct HMA {
@@ -133,6 +161,7 @@ enum MAType {
     Weighted(WMA),
     Exponential(EMA),
     Hull(HMA),
+    Relative(RMA),
 }
 
 #[pymethods]
@@ -144,6 +173,7 @@ impl MA {
             "wma" => MAType::Weighted(WMA::new(window)),
             "ema" => MAType::Exponential(EMA::new(window)),
             "hma" => MAType::Hull(HMA::new(window)),
+            "rma" => MAType::Relative(RMA::new(window)),
             _ => panic!("Invalid method"),
         };
         MA { inner }
@@ -155,6 +185,7 @@ impl MA {
             MAType::Weighted(wma) => wma.update(new_val),
             MAType::Exponential(ema) => ema.update(new_val),
             MAType::Hull(hma) => hma.update(new_val),
+            MAType::Relative(rma) => rma.update(new_val),
         }
     }
 }
