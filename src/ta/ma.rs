@@ -206,7 +206,9 @@ impl LSMA {
         if self.nan_count > 0 {
             f64::NAN
         } else {
-            (self.n * self.weighted_sum - self.sumn * self.sum) / self.denominator
+            let slope = (self.n * self.weighted_sum - self.sumn * self.sum) / self.denominator;
+            let intercept = (self.sum - slope * self.sumn) / self.n;
+            intercept + slope * self.n
         }
     }
 }
