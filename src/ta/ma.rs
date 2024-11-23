@@ -213,6 +213,30 @@ impl LSMA {
     }
 }
 
+// VWMA - Volume-Weighted Moving Average
+#[pyclass]
+pub struct VWMA {
+    weighted_sum: RollingSum,
+    vol_sum: RollingSum,
+}
+
+#[pymethods]
+impl VWMA {
+    #[new]
+    pub fn new(period: usize) -> Self {
+        Self {
+            weighted_sum: RollingSum::new(period),
+            vol_sum: RollingSum::new(period),
+        }
+    }
+
+    pub fn update(&mut self, price: f64, volume: f64) -> f64 {
+        let tot_amt = self.weighted_sum.update(price * volume);
+        let tot_vol = self.vol_sum.update(volume);
+        tot_amt / tot_vol
+    }
+}
+
 #[pyclass]
 pub struct MA {
     inner: MAType,
