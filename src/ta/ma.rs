@@ -23,7 +23,8 @@ impl SMA {
 #[pyclass]
 pub struct WMA {
     container: Container,
-    n: usize,
+    n: f64,
+    sumn: f64,
     nan_count: usize,
     sum: f64,
     weighted_sum: f64,
@@ -33,9 +34,12 @@ pub struct WMA {
 impl WMA {
     #[new]
     pub fn new(period: usize) -> Self {
+        let n = period as f64;
+        let sumn = n * (n + 1.0) / 2.0;
         Self {
             container: Container::new(period),
-            n: period,
+            n,
+            sumn,
             nan_count: period,
             sum: 0.0,
             weighted_sum: 0.0,
@@ -54,7 +58,7 @@ impl WMA {
         }
 
         if new_val.is_finite() {
-            self.weighted_sum += new_val * self.n as f64;
+            self.weighted_sum += new_val * self.n;
             self.sum += new_val;
         } else {
             self.nan_count += 1;
@@ -63,7 +67,7 @@ impl WMA {
         if self.nan_count > 0 {
             f64::NAN
         } else {
-            self.weighted_sum / (self.n * (self.n + 1)) as f64 * 2.0
+            self.weighted_sum / self.sumn
         }
     }
 }
