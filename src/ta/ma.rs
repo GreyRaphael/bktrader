@@ -151,6 +151,62 @@ impl HMA {
     }
 }
 
+// LSMA - Least Squares Moving Average
+#[pyclass]
+pub struct LSMA {
+    container: Container,
+    n: f64,
+    sumn: f64,
+    denominator: f64,
+    nan_count: usize,
+    sum: f64,
+    weighted_sum: f64,
+}
+
+#[pymethods]
+impl LSMA {
+    #[new]
+    pub fn new(period: usize) -> Self {
+        let n = period as f64;
+        let sumn = n * (n + 1.0) / 2.0;
+        let denominator = n * n * (n + 1.0) * (2.0 * n + 1.0) / 6.0 - (sumn).powi(2);
+        Self {
+            container: Container::new(period),
+            n,
+            sumn,
+            denominator,
+            nan_count: period,
+            sum: 0.0,
+            weighted_sum: 0.0,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let old_val = self.container.head();
+        self.container.update(new_val);
+
+        if old_val.is_finite() {
+            self.weighted_sum -= self.sum;
+            self.sum -= old_val;
+        } else {
+            self.nan_count -= 1;
+        }
+
+        if new_val.is_finite() {
+            self.weighted_sum += new_val * self.n;
+            self.sum += new_val;
+        } else {
+            self.nan_count += 1;
+        }
+
+        if self.nan_count > 0 {
+            f64::NAN
+        } else {
+            (self.n * self.weighted_sum - self.sumn * self.sum) / self.denominator
+        }
+    }
+}
+
 #[pyclass]
 pub struct MA {
     inner: MAType,
@@ -162,6 +218,7 @@ enum MAType {
     Exponential(EMA),
     Hull(HMA),
     Relative(RMA),
+    LeastSquares(LSMA),
 }
 
 #[pymethods]
@@ -174,6 +231,7 @@ impl MA {
             "ema" => MAType::Exponential(EMA::new(window)),
             "hma" => MAType::Hull(HMA::new(window)),
             "rma" => MAType::Relative(RMA::new(window)),
+            "lsma" => MAType::LeastSquares(LSMA::new(window)),
             _ => panic!("Invalid method"),
         };
         MA { inner }
@@ -186,6 +244,7 @@ impl MA {
             MAType::Exponential(ema) => ema.update(new_val),
             MAType::Hull(hma) => hma.update(new_val),
             MAType::Relative(rma) => rma.update(new_val),
+            MAType::LeastSquares(lsma) => lsma.update(new_val),
         }
     }
 }
