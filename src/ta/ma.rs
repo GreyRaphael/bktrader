@@ -101,6 +101,31 @@ impl EMA {
     }
 }
 
+// DEMA - Double Exponential Moving Average
+#[pyclass]
+pub struct DEMA {
+    ema_lv1: EMA,
+    ema_lv2: EMA,
+}
+
+#[pymethods]
+impl DEMA {
+    #[new]
+    pub fn new(period: usize) -> Self {
+        Self {
+            ema_lv1: EMA::new(period),
+            ema_lv2: EMA::new(period),
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let lv1 = self.ema_lv1.update(new_val);
+        let lv2 = self.ema_lv2.update(lv1);
+
+        2.0 * lv1 - lv2
+    }
+}
+
 // RMA - Relative Moving Average, similar to EMA
 #[pyclass]
 pub struct RMA {
@@ -246,6 +271,7 @@ enum MAType {
     Simple(SMA),
     Weighted(WMA),
     Exponential(EMA),
+    DoubleExponential(DEMA),
     Hull(HMA),
     Relative(RMA),
     LeastSquares(LSMA),
@@ -259,6 +285,7 @@ impl MA {
             "sma" => MAType::Simple(SMA::new(window)),
             "wma" => MAType::Weighted(WMA::new(window)),
             "ema" => MAType::Exponential(EMA::new(window)),
+            "dema" => MAType::DoubleExponential(DEMA::new(window)),
             "hma" => MAType::Hull(HMA::new(window)),
             "rma" => MAType::Relative(RMA::new(window)),
             "lsma" => MAType::LeastSquares(LSMA::new(window)),
@@ -272,6 +299,7 @@ impl MA {
             MAType::Simple(sma) => sma.update(new_val),
             MAType::Weighted(wma) => wma.update(new_val),
             MAType::Exponential(ema) => ema.update(new_val),
+            MAType::DoubleExponential(dema) => dema.update(new_val),
             MAType::Hull(hma) => hma.update(new_val),
             MAType::Relative(rma) => rma.update(new_val),
             MAType::LeastSquares(lsma) => lsma.update(new_val),
