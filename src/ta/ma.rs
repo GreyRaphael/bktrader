@@ -11,9 +11,7 @@ pub struct SMA {
 impl SMA {
     #[new]
     pub fn new(period: usize) -> Self {
-        Self {
-            sumer: RollingSum::new(period),
-        }
+        Self { sumer: RollingSum::new(period) }
     }
 
     pub fn update(&mut self, new_val: f64) -> f64 {
@@ -99,6 +97,32 @@ impl EMA {
     }
 }
 
+// HMA - Hull Moving Average
+#[pyclass]
+pub struct HMA {
+    full_wma: WMA,
+    half_wma: WMA,
+    sqrt_wma: WMA,
+}
+
+#[pymethods]
+impl HMA {
+    #[new]
+    pub fn new(period: usize) -> Self {
+        let sqrt_period = (period as f64).sqrt().floor() as usize;
+        Self {
+            full_wma: WMA::new(period),
+            half_wma: WMA::new(period / 2),
+            sqrt_wma: WMA::new(sqrt_period),
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let diff_ma = 2.0 * self.half_wma.update(new_val) - self.full_wma.update(new_val);
+        self.sqrt_wma.update(diff_ma)
+    }
+}
+
 #[pyclass]
 pub struct MA {
     inner: MAType,
@@ -108,6 +132,7 @@ enum MAType {
     Simple(SMA),
     Weighted(WMA),
     Exponential(EMA),
+    Hull(HMA),
 }
 
 #[pymethods]
@@ -118,6 +143,7 @@ impl MA {
             "sma" => MAType::Simple(SMA::new(window)),
             "wma" => MAType::Weighted(WMA::new(window)),
             "ema" => MAType::Exponential(EMA::new(window)),
+            "hma" => MAType::Hull(HMA::new(window)),
             _ => panic!("Invalid method"),
         };
         MA { inner }
@@ -128,6 +154,7 @@ impl MA {
             MAType::Simple(sma) => sma.update(new_val),
             MAType::Weighted(wma) => wma.update(new_val),
             MAType::Exponential(ema) => ema.update(new_val),
+            MAType::Hull(hma) => hma.update(new_val),
         }
     }
 }
