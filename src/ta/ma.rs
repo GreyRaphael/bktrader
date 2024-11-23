@@ -262,6 +262,44 @@ impl VWMA {
     }
 }
 
+// ALMA - Arnaud Legoux Moving Average
+#[pyclass]
+pub struct ALMA {
+    container: Container,
+    weights_sum: f64,
+    weights: Vec<f64>,
+}
+
+#[pymethods]
+impl ALMA {
+    #[new]
+    // offset: [0.0, 1.0]
+    // 0: center is oldest point
+    // 1: center is newest point
+    // sigma usually is 6
+    pub fn new(period: usize, offset: f64, sigma: f64) -> Self {
+        let m = offset * (period as f64 - 1.0);
+        let s = period as f64 / sigma;
+        let mut weights = Vec::with_capacity(period);
+        for i in 0..period {
+            let w = (-((i as f64 - m) / s).powi(2)).exp();
+            weights.push(w);
+        }
+
+        Self {
+            container: Container::new(period),
+            weights_sum: weights.iter().sum(),
+            weights,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        self.container.update(new_val);
+        let weighted_sum: f64 = self.container.iter().zip(self.weights.iter()).map(|(p, w)| p * w).sum();
+        weighted_sum / self.weights_sum
+    }
+}
+
 #[pyclass]
 pub struct MA {
     inner: MAType,
