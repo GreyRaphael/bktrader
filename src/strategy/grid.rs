@@ -71,17 +71,33 @@ impl SimpleGrid {
             self.exit_zones[i] = premium_zones[i - 8];
         }
 
+        // Accumulate exit postion ids
+        // exit should before entry
+        let mut positions_to_exit = Vec::new();
         for i in 0..16 {
-            if self.long_croxes[i].update(bar.low, self.entry_zones[i]) == -1 {
-                let pos_id = self.broker.entry(bar, vwap, self.entry_size, None, None);
-                self.ids[i] = Some(pos_id);
-            }
             if self.short_croxes[i].update(bar.high, self.exit_zones[i]) == 1 {
                 if let Some(pos_id) = self.ids[i] {
-                    self.broker.exit(bar, vec![pos_id], vwap);
+                    positions_to_exit.push(pos_id);
                     self.ids[i] = None;
                 }
             }
+        }
+        if !positions_to_exit.is_empty() {
+            self.broker.exit(bar, positions_to_exit, vwap);
+        }
+
+        // Find the deepest entry crossing and accumulate entry size
+        let mut deepest_entry_crossing = None;
+        let mut total_entry_size = 0.0;
+        for i in 15..=0 {
+            if self.long_croxes[i].update(bar.low, self.entry_zones[i]) == -1 {
+                total_entry_size += self.entry_size;
+                deepest_entry_crossing = Some(i);
+            }
+        }
+        if let Some(i) = deepest_entry_crossing {
+            let pos_id = self.broker.entry(bar, vwap, total_entry_size, None, None);
+            self.ids[i] = Some(pos_id);
         }
     }
 }
