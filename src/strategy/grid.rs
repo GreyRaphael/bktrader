@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 pub struct SimpleGrid {
     broker: EtfBroker,
     base_ma: MA,
-    max_active_pos_len: usize,
+    available_pos_num: usize,
     band_mult: f64,
     entry_size: f64,
     premium_smooth_mas: Vec<EMA>,
@@ -29,7 +29,7 @@ impl SimpleGrid {
         Self {
             broker: EtfBroker::new(init_cash, 5.0, 1.5e-4),
             base_ma: MA::new(ma_period, ma_type),
-            max_active_pos_len,
+            available_pos_num: max_active_pos_len,
             band_mult,
             entry_size: original_size,
             premium_smooth_mas: (0..8).map(|_| EMA::new(5)).collect(),
@@ -78,6 +78,7 @@ impl SimpleGrid {
             if self.short_croxes[i].update(bar.high, self.exit_zones[i]) == 1 {
                 if let Some(pos_id) = self.ids[i] {
                     positions_to_exit.push(pos_id);
+                    self.available_pos_num += 1;
                     self.ids[i] = None;
                 }
             }
@@ -86,18 +87,22 @@ impl SimpleGrid {
             self.broker.exit(bar, positions_to_exit, vwap);
         }
 
-        // Find the deepest entry crossing and accumulate entry size
-        let mut deepest_entry_crossing = None;
-        let mut total_entry_size = 0.0;
-        for i in 15..=0 {
-            if self.long_croxes[i].update(bar.low, self.entry_zones[i]) == -1 {
-                total_entry_size += self.entry_size;
-                deepest_entry_crossing = Some(i);
+        // if opened postions smaller than threshold, entry position; else no entry
+        if self.available_pos_num > 0 {
+            // Find the deepest entry crossing and accumulate entry size
+            let mut deepest_entry_crossing = None;
+            let mut total_entry_size = 0.0;
+            for i in 15..=0 {
+                if self.long_croxes[i].update(bar.low, self.entry_zones[i]) == -1 {
+                    total_entry_size += self.entry_size;
+                    self.available_pos_num -= 1;
+                    deepest_entry_crossing = Some(i);
+                }
             }
-        }
-        if let Some(i) = deepest_entry_crossing {
-            let pos_id = self.broker.entry(bar, vwap, total_entry_size, None, None);
-            self.ids[i] = Some(pos_id);
+            if let Some(i) = deepest_entry_crossing {
+                let pos_id = self.broker.entry(bar, vwap, total_entry_size, None, None);
+                self.ids[i] = Some(pos_id);
+            }
         }
     }
 }
