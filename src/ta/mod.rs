@@ -3,6 +3,7 @@ pub mod cross;
 pub mod ma;
 pub mod rolling;
 pub mod volatility;
+pub mod momentum;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let ta = PyModule::new_bound(parent_module.py(), "ta")?;
