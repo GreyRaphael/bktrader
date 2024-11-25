@@ -6,7 +6,7 @@ use crate::ta::volatility::ATR;
 use pyo3::prelude::*;
 
 #[pyclass]
-pub struct SimpleGrid {
+pub struct GridPercent {
     broker: EtfBroker,
     base_ma: MA,
     available_pos_num: usize,
@@ -22,7 +22,7 @@ pub struct SimpleGrid {
 }
 
 #[pymethods]
-impl SimpleGrid {
+impl GridPercent {
     #[new]
     #[pyo3(signature = (init_cash=5e5, ma_period=21, ma_type="sma", max_active_pos_len=6, band_mult=0.02))]
     pub fn new(init_cash: f64, ma_period: usize, ma_type: &str, max_active_pos_len: usize, band_mult: f64) -> Self {
