@@ -4,6 +4,7 @@ pub mod ma;
 pub mod rolling;
 pub mod volatility;
 pub mod momentum;
+pub mod cycle;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let ta = PyModule::new_bound(parent_module.py(), "ta")?;
@@ -21,5 +22,8 @@ pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     ta.add_class::<ma::ALMA>()?;
     ta.add_class::<ma::MA>()?;
     ta.add_class::<cross::Crosser>()?;
+    ta.add_class::<volatility::ATR>()?;
+    ta.add_class::<volatility::NATR>()?;
+    ta.add_class::<momentum::CCI>()?;
     parent_module.add_submodule(&ta)
 }
