@@ -1,5 +1,4 @@
 use pyo3::prelude::*;
-
 use super::ma::SMA;
 
 // CCI - Commodity Channel Index
