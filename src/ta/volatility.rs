@@ -22,3 +22,23 @@ impl ATR {
         self.smooth_ma.update(tr)
     }
 }
+
+// NATR - Normalized Average True Range
+#[pyclass]
+pub struct NATR {
+    atr: ATR,
+}
+
+#[pymethods]
+impl NATR {
+    #[new]
+    #[pyo3(signature = (ma_period=21, ma_type="rma"))]
+    pub fn new(ma_period: usize, ma_type: &str) -> Self {
+        Self { atr: ATR::new(ma_period, ma_type) }
+    }
+
+    pub fn update(&mut self, high: f64, low: f64, close: f64, preclose: f64) -> f64 {
+        let atr_val = self.atr.update(high, low, preclose);
+        atr_val / close
+    }
+}
