@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 pub mod cross;
 pub mod ma;
 pub mod rolling;
+pub mod volatility;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let ta = PyModule::new_bound(parent_module.py(), "ta")?;
