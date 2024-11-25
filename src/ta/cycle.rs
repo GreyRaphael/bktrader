@@ -1,6 +1,5 @@
-use core::f64;
-
 use super::{ma::WMA, rolling::Container};
+use core::f64;
 use pyo3::prelude::*;
 
 // HtPhasor - Hilbert Transform - Phasor Components
@@ -29,11 +28,11 @@ impl HtPhasor {
         let smooth_price = self.wmaer.update(new_val);
         self.container.update(smooth_price);
         // Quadrature (Q): Uses the current Detrender value, i.e., Detrender[0].
-        let detrender0 = self.coeff_a * self.container.get(0) + self.coeff_b * self.container.get(2) - self.coeff_b * self.container.get(4) - self.coeff_a * self.container.get(6);
-        // let detrender1 = self.coeff_a * self.container.get(1) + self.coeff_b * self.container.get(3) - self.coeff_b * self.container.get(5) - self.coeff_a * self.container.get(7);
-        // let detrender2 = self.coeff_a * self.container.get(2) + self.coeff_b * self.container.get(4) - self.coeff_b * self.container.get(6) - self.coeff_a * self.container.get(8);
+        let detrender0 = self.coeff_a * self.container.get(9) + self.coeff_b * self.container.get(7) - self.coeff_b * self.container.get(5) - self.coeff_a * self.container.get(3);
+        // let detrender1 = self.coeff_a * self.container.get(8) + self.coeff_b * self.container.get(6) - self.coeff_b * self.container.get(4) - self.coeff_a * self.container.get(2);
+        // let detrender2 = self.coeff_a * self.container.get(7) + self.coeff_b * self.container.get(5) - self.coeff_b * self.container.get(3) - self.coeff_a * self.container.get(1);
         // InPhase (I): Uses the Detrender value lagged by 3 periods
-        let detrender3 = self.coeff_a * self.container.get(3) + self.coeff_b * self.container.get(5) - self.coeff_b * self.container.get(7) - self.coeff_a * self.container.get(9);
+        let detrender3 = self.coeff_a * self.container.get(6) + self.coeff_b * self.container.get(4) - self.coeff_b * self.container.get(2) - self.coeff_a * self.container.get(0);
 
         (detrender3, detrender0)
     }
