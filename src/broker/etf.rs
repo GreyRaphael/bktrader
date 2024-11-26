@@ -100,6 +100,12 @@ impl EtfBroker {
         self.portfolio_value = self.cash + self.active_positions_sum() * bar.close;
     }
 
+    pub fn update_active_pnl(&mut self, bar: &Bar) {
+        self.positions.iter_mut().filter(|pos| pos.status == PositionStatus::Opened).for_each(|pos| {
+            pos.pnl = Some((bar.close - pos.entry_price) * pos.volume);
+        });
+    }
+
     pub fn active_position_first(&self) -> Option<Position> {
         self.positions.iter().find(|pos| pos.status == PositionStatus::Opened).copied()
     }
