@@ -1,3 +1,11 @@
+# Formula
+
+- [Formula](#formula)
+  - [Hilbert Transform](#hilbert-transform)
+  - [Confidence Bands and Prediction Bands](#confidence-bands-and-prediction-bands)
+
+## Hilbert Transform
+
 The "Hilbert Transform - Phasor Components" (HT_PHASOR) in TA-Lib computes the inphase and quadrature components of a time series, which are used to determine the dominant cycle phase and amplitude in the data. This function is based on John Ehlers' work on applying the Hilbert Transform in technical analysis.
 
 Here's a step-by-step calculation for your price series $[10, 11, 12, \dots, 30]$, where $30$ is the latest value and $10$ is the oldest value.
@@ -7,12 +15,12 @@ Here's a step-by-step calculation for your price series $[10, 11, 12, \dots, 30]
 First, list out your price series with their corresponding time indices:
 
 | Time $t$ | Price $P(t)$ |
-|------------|----------------|
-| 0          | 10             |
-| 1          | 11             |
-| 2          | 12             |
-| ...        | ...            |
-| 20         | 30             |
+| -------- | ------------ |
+| 0        | 10           |
+| 1        | 11           |
+| 2        | 12           |
+| ...      | ...          |
+| 20       | 30           |
 
 **2. Calculate the Smoothed Price**
 
@@ -143,3 +151,75 @@ The inphase and quadrature arrays will contain the computed values starting from
 ---
 
 **Please Note:** The above calculations are illustrative. In a real-world scenario, you would perform these calculations using precise floating-point arithmetic, ensuring that all intermediate steps are accurately computed. Additionally, edge cases and initial conditions need to be handled carefully.
+
+## Confidence Bands and Prediction Bands
+
+To calculate the 95% confidence bands and 95% prediction bands for the regression line obtained through Least Squares, follow these steps:
+
+1. **Least Squares Regression**  
+Given a set of data points $(x_i, y_i)$ for $i = 1, 2, ..., n$, the linear regression model is typically written as:
+$$
+y = \beta_0 + \beta_1 x + \epsilon
+$$
+where $\beta_0$ is the intercept, $\beta_1$ is the slope, and $\epsilon$ is the error term.
+
+You can obtain the Least Squares estimates $\hat{\beta}_0$ and $\hat{\beta}_1$ using the normal equations:
+$$
+\hat{\beta}_1 = \frac{n \sum_{i=1}^{n} x_i y_i - \sum_{i=1}^{n} x_i \sum_{i=1}^{n} y_i}{n \sum_{i=1}^{n} x_i^2 - (\sum_{i=1}^{n} x_i)^2}
+$$
+$$
+\hat{\beta}_0 = \frac{1}{n} \sum_{i=1}^{n} y_i - \hat{\beta}_1 \frac{1}{n} \sum_{i=1}^{n} x_i
+$$
+These provide the best-fit line.
+
+2. **Residuals and Standard Error of the Estimate**  
+The residuals are the differences between the observed values and the predicted values:
+$$
+e_i = y_i - (\hat{\beta}_0 + \hat{\beta}_1 x_i)
+$$
+The residual sum of squares (RSS) is:
+$$
+RSS = \sum_{i=1}^{n} e_i^2
+$$
+The standard error of the estimate is:
+$$
+SE_{\text{est}} = \sqrt{\frac{RSS}{n - 2}}
+$$
+where $n - 2$ is the degrees of freedom (since two parameters, $\hat{\beta}_0$ and $\hat{\beta}_1$, are estimated).
+
+3. **95% Confidence Bands**  
+The confidence band represents the uncertainty around the regression line at a given point $x$. The formula for the 95% confidence interval around the estimated mean response at a particular $x_0$ is:
+$$
+\hat{y}_0 \pm t_{\alpha/2, n-2} \cdot SE_{\hat{y}_0}
+$$
+where:
+- $\hat{y}_0 = \hat{\beta}_0 + \hat{\beta}_1 x_0$ is the predicted value at $x_0$,
+- $SE_{\hat{y}_0} = SE_{\text{est}} \sqrt{\frac{1}{n} + \frac{(x_0 - \bar{x})^2}{\sum_{i=1}^{n} (x_i - \bar{x})^2}}$ is the standard error of the predicted value at $x_0$,
+- $t_{\alpha/2, n-2}$ is the critical value from the $t$-distribution with $n-2$ degrees of freedom and $\alpha = 0.05$ (for a 95% confidence level).
+
+The confidence bands account for the variability in estimating the regression line.
+
+4. **95% Prediction Bands**  
+The prediction band is wider than the confidence band because it accounts not only for the uncertainty in estimating the regression line but also for the variability in the data points around the line. The formula for the 95% prediction interval at $x_0$ is:
+$$
+\hat{y}_0 \pm t_{\alpha/2, n-2} \cdot SE_{\text{pred}}
+$$
+where:
+$$
+SE_{\text{pred}} = SE_{\text{est}} \sqrt{1 + \frac{1}{n} + \frac{(x_0 - \bar{x})^2}{\sum_{i=1}^{n} (x_i - \bar{x})^2}}
+$$
+This interval is wider because it includes both the model error and the inherent variability in the data.
+
+Summary of Key Formulas
+- **Confidence interval around the regression line at $x_0$:**
+  $$
+  \hat{y}_0 \pm t_{\alpha/2, n-2} \cdot SE_{\hat{y}_0}
+  $$
+- **Prediction interval for a new observation at $x_0$:**
+  $$
+  \hat{y}_0 \pm t_{\alpha/2, n-2} \cdot SE_{\text{pred}}
+  $$
+
+Both bands require calculating the standard errors of the predicted value and the estimate based on residuals. The difference lies in how they account for the variability—confidence bands focus on the line itself, while prediction bands include both the line and future data points.
+
+You can use these intervals to visually assess the precision of your regression model and the likely range of future observations at specific values of $x$.
