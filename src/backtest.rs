@@ -1,84 +1,100 @@
-// Define a Quote struct to represent market data
+use std::fmt::Debug;
+
+trait OnQuote<T> {
+    fn on_quote(&self, item: &T);
+}
+
 #[derive(Debug)]
-struct Quote {
+struct Bar {
+    price: i32,
+}
+
+#[derive(Debug)]
+struct Stock {
+    symbol: String,
     price: f64,
 }
 
-// Define the StrategyBase trait with an on_quote method
-trait StrategyBase {
-    fn on_quote(&mut self, quote: &Quote);
+struct MyRange<T> {
+    data: Vec<T>,
 }
 
-// Define the ReplayerBase trait that provides an iterator over quotes
-trait ReplayerBase {
-    fn iter<'a>(&'a mut self) -> Box<dyn Iterator<Item = Quote> + 'a>;
+impl<T> MyRange<T> {
+    fn new(data: Vec<T>) -> Self {
+        MyRange { data }
+    }
 }
 
-// Implement the BacktestEngine struct that uses a replayer and a strategy
-struct BacktestEngine<R, S>
-where
-    R: ReplayerBase,
-    S: StrategyBase,
-{
-    replayer: R,
+impl<T> IntoIterator for MyRange<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.into_iter()
+    }
+}
+
+struct MyBarStrategy;
+
+impl OnQuote<Bar> for MyBarStrategy {
+    fn on_quote(&self, item: &Bar) {
+        println!("{:?}", item);
+    }
+}
+
+struct MyStockStrategy;
+
+impl OnQuote<Stock> for MyStockStrategy {
+    fn on_quote(&self, item: &Stock) {
+        println!("{:?}", item);
+    }
+}
+
+struct Engine<R, S, T> {
+    range: R,
     strategy: S,
+    _marker: std::marker::PhantomData<T>, // To store the item type
 }
 
-impl<R, S> BacktestEngine<R, S>
+impl<R, S, T> Engine<R, S, T>
 where
-    R: ReplayerBase,
-    S: StrategyBase,
+    R: IntoIterator<Item = T>,
+    S: OnQuote<T>,
 {
-    // Constructor for BacktestEngine
-    fn new(replayer: R, strategy: S) -> Self {
-        Self { replayer, strategy }
+    fn new(range: R, strategy: S) -> Self {
+        Engine {
+            range,
+            strategy,
+            _marker: std::marker::PhantomData,
+        }
     }
 
-    // The run method loops over the replayer and passes quotes to the strategy
-    fn run(&mut self) {
-        for quote in self.replayer.iter() {
-            self.strategy.on_quote(&quote);
+    fn run(self) {
+        for item in self.range.into_iter() {
+            self.strategy.on_quote(&item);
         }
     }
 }
 
-// Implement a simple replayer that replays a vector of quotes
-struct SimpleReplayer {
-    quotes: Vec<Quote>,
-}
-
-impl ReplayerBase for SimpleReplayer {
-    fn iter<'a>(&'a mut self) -> Box<dyn Iterator<Item = Quote> + 'a> {
-        // Use drain to consume the quotes vector and return an iterator
-        Box::new(self.quotes.drain(..))
-    }
-}
-
-// Implement a simple strategy that prints received quotes
-struct SimpleStrategy;
-
-impl StrategyBase for SimpleStrategy {
-    fn on_quote(&mut self, quote: &Quote) {
-        println!("Received quote: {:?}", quote);
-    }
-}
-
-// // Main function to tie everything together
 // fn main() {
-//     // Sample quotes data
-//     let quotes = vec![
-//         Quote { price: 100.0 },
-//         Quote { price: 101.5 },
-//         Quote { price: 102.3 },
-//     ];
+//     // Working with MyRange of Bar
+//     let bar_range = MyRange::new(vec![Bar { price: 100 }, Bar { price: 200 }, Bar { price: 300 }]);
+//     let bar_strategy = MyBarStrategy;
+//     let bar_engine = Engine::new(bar_range, bar_strategy);
+//     bar_engine.run();
 
-//     // Create a replayer and strategy instance
-//     let replayer = SimpleReplayer { quotes };
-//     let strategy = SimpleStrategy;
-
-//     // Initialize the backtest engine with the replayer and strategy
-//     let mut engine = BacktestEngine::new(replayer, strategy);
-
-//     // Run the backtest
-//     engine.run();
+//     // Working with MyRange of Stock
+//     let stock_range = MyRange::new(vec![
+//         Stock {
+//             symbol: "AAPL".to_string(),
+//             price: 145.67,
+//         },
+//         Stock {
+//             symbol: "GOOGL".to_string(),
+//             price: 2730.56,
+//         },
+//     ]);
+//     let stock_strategy = MyStockStrategy;
+//     let stock_engine = Engine::new(stock_range, stock_strategy);
+//     stock_engine.run();
 // }
