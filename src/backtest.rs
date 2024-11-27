@@ -69,6 +69,7 @@ where
         }
     }
 
+    // here must be self, cannot be &self or &mut self
     fn run(self) {
         for item in self.range.into_iter() {
             self.strategy.on_quote(&item);
