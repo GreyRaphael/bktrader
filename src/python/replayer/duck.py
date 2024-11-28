@@ -23,7 +23,9 @@ class DuckdbReplayer:
         FROM
             etf
         WHERE
-            code=? AND dt BETWEEN ? AND ?"""
+            preclose IS NOT NULL
+            AND code=?
+            AND dt BETWEEN ? AND ?"""
         self.conn.execute(query, [symbol, start, end])
 
     def __iter__(self):
