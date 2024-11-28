@@ -132,30 +132,8 @@ pub struct GridATR {
     exit_zones: Vec<f64>,
 }
 
-#[pymethods]
-impl GridATR {
-    #[new]
-    #[pyo3(signature = (init_cash=5e5, ma_period=21, ma_type="sma", atr_period=60, atr_ma_type="rma", max_active_pos_len=6, band_mult=0.02))]
-    pub fn new(init_cash: f64, ma_period: usize, ma_type: &str, atr_period: usize, atr_ma_type: &str, max_active_pos_len: usize, band_mult: f64) -> Self {
-        let original_size = (init_cash / max_active_pos_len as f64 / 100.0).floor() * 100.0;
-        Self {
-            broker: EtfBroker::new(init_cash, 5.0, 1.5e-4),
-            base_ma: MA::new(ma_period, ma_type),
-            atr: ATR::new(atr_period, atr_ma_type),
-            band_mult,
-            available_pos_num: max_active_pos_len,
-            entry_size: original_size,
-            premium_smooth_mas: (0..8).map(|_| EMA::new(5)).collect(),
-            discount_smooth_mas: (0..8).map(|_| EMA::new(5)).collect(),
-            long_croxes: (0..16).map(|_| Crosser::new()).collect(),
-            short_croxes: (0..16).map(|_| Crosser::new()).collect(),
-            ids: vec![None; 16],
-            entry_zones: vec![0.0; 16],
-            exit_zones: vec![0.0; 16],
-        }
-    }
-
-    pub fn on_bar(&mut self, bar: &Bar) {
+impl OnQuote<Bar> for GridATR {
+    fn on_quote(&mut self, bar: &Bar) {
         let ohlc4 = (bar.open + bar.high + bar.low + bar.close) / 4.0;
         let vwap = bar.amount / bar.volume;
         let ma_center = self.base_ma.update(ohlc4);
@@ -214,5 +192,33 @@ impl GridATR {
                 self.ids[i] = Some(pos_id);
             }
         }
+    }
+}
+
+#[pymethods]
+impl GridATR {
+    #[new]
+    #[pyo3(signature = (init_cash=5e5, ma_period=21, ma_type="sma", atr_period=60, atr_ma_type="rma", max_active_pos_len=6, band_mult=0.02))]
+    pub fn new(init_cash: f64, ma_period: usize, ma_type: &str, atr_period: usize, atr_ma_type: &str, max_active_pos_len: usize, band_mult: f64) -> Self {
+        let original_size = (init_cash / max_active_pos_len as f64 / 100.0).floor() * 100.0;
+        Self {
+            broker: EtfBroker::new(init_cash, 5.0, 1.5e-4),
+            base_ma: MA::new(ma_period, ma_type),
+            atr: ATR::new(atr_period, atr_ma_type),
+            band_mult,
+            available_pos_num: max_active_pos_len,
+            entry_size: original_size,
+            premium_smooth_mas: (0..8).map(|_| EMA::new(5)).collect(),
+            discount_smooth_mas: (0..8).map(|_| EMA::new(5)).collect(),
+            long_croxes: (0..16).map(|_| Crosser::new()).collect(),
+            short_croxes: (0..16).map(|_| Crosser::new()).collect(),
+            ids: vec![None; 16],
+            entry_zones: vec![0.0; 16],
+            exit_zones: vec![0.0; 16],
+        }
+    }
+
+    pub fn on_bar(&mut self, bar: &Bar) {
+        self.on_quote(bar);
     }
 }
