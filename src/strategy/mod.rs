@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 mod grid;
+mod base;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let strategy = PyModule::new_bound(parent_module.py(), "strategy")?;
