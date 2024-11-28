@@ -111,7 +111,9 @@ impl GridPercent {
     }
 
     pub fn on_bar(&mut self, bar: &Bar) {
+        println!("{:?}", bar);
         self.on_quote(bar);
+        self.broker.update_portfolio_value(bar);
     }
 }
 
@@ -220,5 +222,6 @@ impl GridATR {
 
     pub fn on_bar(&mut self, bar: &Bar) {
         self.on_quote(bar);
+        self.broker.update_portfolio_value(bar);
     }
 }
