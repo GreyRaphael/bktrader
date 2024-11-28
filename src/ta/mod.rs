@@ -7,7 +7,7 @@ pub mod momentum;
 pub mod cycle;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
-    let ta = PyModule::new_bound(parent_module.py(), "ta")?;
+    let ta = PyModule::new(parent_module.py(), "ta")?;
     ta.add_class::<rolling::RollingSum>()?;
     ta.add_class::<rolling::RollingMax>()?;
     ta.add_class::<rolling::RollingMin>()?;
