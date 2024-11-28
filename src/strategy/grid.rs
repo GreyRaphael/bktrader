@@ -1,4 +1,4 @@
-use super::base::OnQuote;
+use super::base::QuoteHandler;
 use crate::broker::etf::EtfBroker;
 use crate::datatype::bar::Bar;
 use crate::ta::cross::Crosser;
@@ -22,7 +22,7 @@ pub struct GridPercent {
     exit_zones: Vec<f64>,
 }
 
-impl OnQuote<Bar> for GridPercent {
+impl QuoteHandler<Bar> for GridPercent {
     fn on_quote(&mut self, bar: &Bar) {
         let ohlc4 = (bar.open + bar.high + bar.low + bar.close) / 4.0;
         let vwap = bar.amount / bar.volume;
@@ -132,7 +132,7 @@ pub struct GridATR {
     exit_zones: Vec<f64>,
 }
 
-impl OnQuote<Bar> for GridATR {
+impl QuoteHandler<Bar> for GridATR {
     fn on_quote(&mut self, bar: &Bar) {
         let ohlc4 = (bar.open + bar.high + bar.low + bar.close) / 4.0;
         let vwap = bar.amount / bar.volume;
