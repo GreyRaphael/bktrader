@@ -73,7 +73,7 @@ impl QuoteHandler<Bar> for GridPercent {
             // Find the deepest entry crossing and accumulate entry size
             let mut deepest_entry_crossing = None;
             let mut total_entry_size = 0.0;
-            for i in 15..=0 {
+            for i in (0..=15).rev() {
                 if self.long_croxes[i].update(bar.low, self.entry_zones[i]) == -1 {
                     total_entry_size += self.entry_size;
                     self.available_pos_num -= 1;
@@ -182,7 +182,7 @@ impl QuoteHandler<Bar> for GridATR {
             // Find the deepest entry crossing and accumulate entry size
             let mut deepest_entry_crossing = None;
             let mut total_entry_size = 0.0;
-            for i in 15..=0 {
+            for i in (0..=15).rev() {
                 if self.long_croxes[i].update(bar.low, self.entry_zones[i]) == -1 {
                     total_entry_size += self.entry_size;
                     self.available_pos_num -= 1;
