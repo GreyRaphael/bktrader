@@ -76,7 +76,6 @@ impl EtfBroker {
                 position.exit_price = Some(price);
                 sold_vol += position.volume;
                 indices_to_update.push(index);
-                println!("exit {:?}", position);
             }
         }
 
@@ -94,6 +93,7 @@ impl EtfBroker {
             position.fees = avg_fees;
             position.fees += fees;
             position.pnl = Some((price - position.entry_price) * position.volume);
+            println!("exit {:?}", position);
         }
     }
 
