@@ -17,7 +17,7 @@ if __name__ == "__main__":
     replayer = DuckdbReplayer(start=dt.date(2021, 1, 1), end=dt.date(2024, 11, 30), symbol=513650, uri="bar1d.db")
     # stg = strategy.DMAStrategy(init_cash=5e4)
     stg = strategy.GridPercent(init_cash=5e4, band_mult=2, max_active_pos_len=10)
-    # stg = strategy.GridATR(init_cash=1e5, band_mult=1.5, max_active_pos_len=25)
+    # stg = strategy.GridATR(init_cash=5e4, band_mult=1.5, max_active_pos_len=10)
     engine = BacktestEngine(replayer, stg)
     start_time = time.time()
     engine.run()
