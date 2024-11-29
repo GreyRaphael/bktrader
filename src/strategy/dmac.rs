@@ -8,6 +8,7 @@ use pyo3::prelude::*;
 
 #[pyclass]
 pub struct DMAStrategy {
+    #[pyo3(get)]
     broker: EtfBroker,
     fast_ma: MA,
     slow_ma: MA,

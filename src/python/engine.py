@@ -22,3 +22,6 @@ if __name__ == "__main__":
     start_time = time.time()
     engine.run()
     print(f"cost {time.time()-start_time:.2f}s")
+    print(f"last portfolio: {stg.broker.portfolio_value}")
+    print(f"total_fees: {stg.broker.total_fees}")
+    print(f"actives: {stg.broker.active_position_len()}")

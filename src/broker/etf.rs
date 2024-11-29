@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 use std::collections::HashMap;
 
 #[pyclass]
+#[derive(Clone)] // for the #[pyo3(get)] in strategies
 pub struct EtfBroker {
     pub init_cash: f64,
     #[pyo3(get)]

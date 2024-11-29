@@ -8,6 +8,7 @@ use pyo3::prelude::*;
 
 #[pyclass]
 pub struct GridPercent {
+    #[pyo3(get)]
     broker: EtfBroker,
     base_ma: MA,
     available_pos_num: usize,
@@ -118,6 +119,7 @@ impl GridPercent {
 
 #[pyclass]
 pub struct GridATR {
+    #[pyo3(get)]
     broker: EtfBroker,
     base_ma: MA,
     atr: ATR,
