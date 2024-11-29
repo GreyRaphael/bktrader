@@ -14,8 +14,10 @@ if __name__ == "__main__":
     from replayer.duck import DuckdbReplayer
     from bktrader import strategy
 
-    replayer = DuckdbReplayer(start=dt.date(2010, 1, 1), end=dt.date(2024, 11, 30), symbol=510050, uri="bar1d.db")
-    stg = strategy.GridPercent()
+    replayer = DuckdbReplayer(start=dt.date(2024, 1, 1), end=dt.date(2024, 11, 30), symbol=510050, uri="bar1d.db")
+    stg = strategy.DMAStrategy()
+    # stg = strategy.GridPercent()
+    # stg = strategy.GridATR()
     engine = BacktestEngine(replayer, stg)
     start_time = time.time()
     engine.run()
