@@ -25,5 +25,6 @@ pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     ta.add_class::<volatility::ATR>()?;
     ta.add_class::<volatility::NATR>()?;
     ta.add_class::<momentum::CCI>()?;
+    ta.add_class::<momentum::KDJ>()?;
     parent_module.add_submodule(&ta)
 }
