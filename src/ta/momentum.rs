@@ -1,5 +1,5 @@
 use super::{
-    ma::{MA, SMA},
+    ma::MA,
     rolling::{RollingMax, RollingMin},
 };
 use pyo3::prelude::*;
@@ -7,17 +7,18 @@ use pyo3::prelude::*;
 // CCI - Commodity Channel Index
 #[pyclass]
 pub struct CCI {
-    tp_meaner: SMA,
-    deviation_meaner: SMA,
+    tp_meaner: MA,
+    deviation_meaner: MA,
 }
 
 #[pymethods]
 impl CCI {
     #[new]
-    pub fn new(period: usize) -> Self {
+    #[pyo3(signature = (ma_period=14, ma_type="sma"))]
+    pub fn new(ma_period: usize, ma_type: &str) -> Self {
         Self {
-            tp_meaner: SMA::new(period),
-            deviation_meaner: SMA::new(period),
+            tp_meaner: MA::new(ma_period, ma_type),
+            deviation_meaner: MA::new(ma_period, ma_type),
         }
     }
 
