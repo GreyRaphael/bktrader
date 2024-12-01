@@ -73,13 +73,15 @@ impl QuoteHandler<Bar> for GridPercent {
         if self.available_pos_num > 0 {
             // Find the deepest entry crossing and accumulate entry size
             let mut deepest_entry_crossing = None;
+            let mut cross_num = 0;
             for i in (0..=15).rev() {
                 if self.long_croxes[i].update(bar.low, self.entry_zones[i]) == -1 {
                     deepest_entry_crossing = Some(i);
+                    cross_num += 1;
                 }
             }
             if let Some(i) = deepest_entry_crossing {
-                let entry_size = (self.entry_amount / vwap / 100.0).floor() * 100.0;
+                let entry_size = (self.entry_amount * (2.0 as f64).powi(cross_num - 1) / vwap / 100.0).floor() * 100.0;
                 let pos_id = self.broker.entry(bar, vwap, entry_size, None, None);
                 self.available_pos_num -= 1;
                 self.ids[i] = Some(pos_id);
@@ -113,7 +115,7 @@ impl GridPercent {
     pub fn on_bar(&mut self, bar: &Bar) {
         self.on_quote(bar);
         self.broker.update_portfolio_value(bar);
-        println!("portfolio={}, {:?}", self.broker.portfolio_value, bar);
+        // println!("portfolio={}, {:?}", self.broker.portfolio_value, bar);
     }
 }
 
@@ -223,6 +225,6 @@ impl GridATR {
     pub fn on_bar(&mut self, bar: &Bar) {
         self.on_quote(bar);
         self.broker.update_portfolio_value(bar);
-        println!("portfolio={}, {:?}", self.broker.portfolio_value, bar);
+        // println!("portfolio={}, {:?}", self.broker.portfolio_value, bar);
     }
 }
