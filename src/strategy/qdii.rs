@@ -14,6 +14,7 @@ pub struct GridCCI {
     rank_limit: f64,
     entry_amount: f64,
     available_pos_num: usize,
+    profit_limit: f64,
 }
 
 impl QuoteHandler<Bar> for GridCCI {
@@ -23,11 +24,12 @@ impl QuoteHandler<Bar> for GridCCI {
         let cci_rank = self.ranker.update(cci_val);
 
         let mut positions_to_exit = Vec::new();
-        for pos in self.broker.positions.iter() {
+        for pos in self.broker.active_positions().iter() {
             if let Some(take_profit) = pos.take_profit {
                 let profit = vwap / pos.entry_price - 1.0;
                 if profit > take_profit {
                     positions_to_exit.push(pos.id);
+                    self.available_pos_num += 1;
                 }
             }
         }
@@ -38,7 +40,8 @@ impl QuoteHandler<Bar> for GridCCI {
         if self.available_pos_num > 0 {
             if cci_rank <= self.rank_limit {
                 let entry_size = (self.entry_amount / vwap / 100.0).floor() * 100.0;
-                self.broker.entry(bar, vwap, entry_size, None, Some(0.05));
+                self.broker.entry(bar, vwap, entry_size, None, Some(self.profit_limit));
+                self.available_pos_num -= 1;
             }
         }
     }
@@ -47,8 +50,8 @@ impl QuoteHandler<Bar> for GridCCI {
 #[pymethods]
 impl GridCCI {
     #[new]
-    #[pyo3(signature = (init_cash=5e5, rank_period=60, cci_period=20, ma_type="sma", rank_limit=0.1, max_active_pos_len=6))]
-    pub fn new(init_cash: f64, rank_period: usize, cci_period: usize, ma_type: &str, rank_limit: f64, max_active_pos_len: usize) -> Self {
+    #[pyo3(signature = (init_cash=5e5, rank_period=60, cci_period=20, ma_type="sma", rank_limit=0.1, max_active_pos_len=6, profit_limit=0.05))]
+    pub fn new(init_cash: f64, rank_period: usize, cci_period: usize, ma_type: &str, rank_limit: f64, max_active_pos_len: usize, profit_limit: f64) -> Self {
         let origin_amount = init_cash / max_active_pos_len as f64;
         Self {
             broker: EtfBroker::new(init_cash, 5.0, 1.5e-4),
@@ -57,11 +60,13 @@ impl GridCCI {
             rank_limit,
             entry_amount: origin_amount,
             available_pos_num: max_active_pos_len,
+            profit_limit,
         }
     }
 
     pub fn on_bar(&mut self, bar: &Bar) {
         self.on_quote(bar);
         self.broker.update_portfolio_value(bar);
+        println!("portfolio={} at {:?}", self.broker.portfolio_value, bar);
     }
 }
