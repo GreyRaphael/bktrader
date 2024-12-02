@@ -143,10 +143,7 @@ impl RollingMax {
         if self.nan_count > 0 {
             f64::NAN
         } else {
-            self.container.iter().fold(
-                f64::NAN,
-                |cur_max, x| if *x <= cur_max { cur_max } else { *x },
-            )
+            self.container.iter().fold(f64::NAN, |cur_max, x| if *x <= cur_max { cur_max } else { *x })
         }
     }
 }
@@ -182,10 +179,7 @@ impl RollingMin {
         if self.nan_count > 0 {
             f64::NAN
         } else {
-            self.container.iter().fold(
-                f64::NAN,
-                |cur_min, x| if *x >= cur_min { cur_min } else { *x },
-            )
+            self.container.iter().fold(f64::NAN, |cur_min, x| if *x >= cur_min { cur_min } else { *x })
         }
     }
 }
