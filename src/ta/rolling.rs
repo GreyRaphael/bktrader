@@ -238,3 +238,40 @@ impl RollingQuantile {
         }
     }
 }
+#[pyclass]
+pub struct RollingRank {
+    container: Container,
+    nan_count: usize,
+}
+
+#[pymethods]
+impl RollingRank {
+    #[new]
+    pub fn new(n: usize) -> Self {
+        Self {
+            container: Container::new(n),
+            nan_count: n,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let old_val = self.container.head();
+        self.container.update(new_val);
+
+        if new_val.is_nan() {
+            self.nan_count += 1;
+        }
+
+        if old_val.is_nan() {
+            self.nan_count -= 1;
+        }
+
+        if self.nan_count > 0 {
+            f64::NAN
+        } else {
+            let last_element = self.container.tail();
+            let count = self.container.iter().filter(|&&x| x < last_element).count();
+            count as f64 / self.container.len() as f64
+        }
+    }
+}
