@@ -2,7 +2,7 @@ use super::base::QuoteHandler;
 use crate::broker::etf::EtfBroker;
 use crate::datatype::bar::Bar;
 use crate::ta::momentum::CCI;
-use crate::ta::rolling::RollingRank;
+use crate::ta::rolling::{Container, RollingRank};
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -10,6 +10,7 @@ pub struct GridCCI {
     #[pyo3(get)]
     broker: EtfBroker,
     cci: CCI,
+    vol_differ: Container,
     ranker: RollingRank,
     rank_limit: f64,
     entry_amount: f64,
@@ -22,6 +23,7 @@ impl QuoteHandler<Bar> for GridCCI {
         let vwap = bar.amount / bar.volume;
         let cci_val = self.cci.update(bar.high, bar.low, vwap);
         let cci_rank = self.ranker.update(cci_val);
+        let (vol_head, vol_tail) = self.vol_differ.update(bar.volume);
 
         let mut positions_to_exit = Vec::new();
         for pos in self.broker.active_positions().iter() {
@@ -38,7 +40,7 @@ impl QuoteHandler<Bar> for GridCCI {
         }
 
         if self.available_pos_num > 0 {
-            if cci_rank <= self.rank_limit {
+            if (vol_tail / vol_head < 1.0) && (cci_val < 0.0) && (cci_rank <= self.rank_limit) {
                 let entry_size = (self.entry_amount / vwap / 100.0).floor() * 100.0;
                 self.broker.entry(bar, vwap, entry_size, None, Some(self.profit_limit));
                 self.available_pos_num -= 1;
@@ -56,6 +58,7 @@ impl GridCCI {
         Self {
             broker: EtfBroker::new(init_cash, 5.0, 1.5e-4),
             cci: CCI::new(cci_period, ma_type),
+            vol_differ: Container::new(2),
             ranker: RollingRank::new(rank_period),
             rank_limit,
             entry_amount: origin_amount,
@@ -67,6 +70,5 @@ impl GridCCI {
     pub fn on_bar(&mut self, bar: &Bar) {
         self.on_quote(bar);
         self.broker.update_portfolio_value(bar);
-        println!("portfolio={} at {:?}", self.broker.portfolio_value, bar);
     }
 }
