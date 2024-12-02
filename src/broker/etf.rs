@@ -55,7 +55,7 @@ impl EtfBroker {
         pos.fees = fees;
         pos.stop_loss = stop_loss;
         pos.take_profit = take_profit;
-        println!("entry {:?}", pos);
+        // println!("entry {:?}", pos);
 
         self.positions.push(pos);
 
@@ -94,7 +94,7 @@ impl EtfBroker {
             position.fees = avg_fees;
             position.fees += fees;
             position.pnl = Some((price - position.entry_price) * position.volume);
-            println!("exit {:?}", position);
+            // println!("exit {:?}", position);
         }
     }
 
