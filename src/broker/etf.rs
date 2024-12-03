@@ -1,3 +1,4 @@
+use super::analyzer::Analyzer;
 use crate::datatype::{bar::Bar, position::Position, position::PositionStatus};
 use pyo3::prelude::*;
 use std::collections::HashMap;
@@ -16,6 +17,8 @@ pub struct EtfBroker {
     pub positions: Vec<Position>,
     #[pyo3(get)]
     total_fees: f64,
+    #[pyo3(get)]
+    analyzer: Analyzer,
 }
 
 impl EtfBroker {
@@ -41,6 +44,7 @@ impl EtfBroker {
             ptc,
             positions: Vec::with_capacity(100),
             total_fees: 0.0,
+            analyzer: Analyzer::new(),
         }
     }
 
@@ -100,6 +104,7 @@ impl EtfBroker {
 
     pub fn update_portfolio_value(&mut self, bar: &Bar) {
         self.portfolio_value = self.cash + self.active_positions_sum() * bar.close;
+        self.analyzer.update(self.portfolio_value);
     }
 
     pub fn update_active_pnl(&mut self, bar: &Bar) {

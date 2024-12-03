@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 
 #[pyclass]
+#[derive(Clone)] // for the #[pyo3(get)]
 pub struct Analyzer {
     #[pyo3(get)]
     equity_curve: Vec<f64>,
