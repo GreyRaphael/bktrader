@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+pub mod analyzer;
 pub mod etf;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
