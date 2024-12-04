@@ -123,6 +123,84 @@ impl BarEngine {
     }
 }
 
+enum TickStrategy {
+    Simple(StrategyA),
+    Complex(StrategyB),
+}
+
+impl TickStrategy {
+    fn on_tick(&mut self, quote: &Tick) {
+        match self {
+            Self::Simple(simple) => simple.on_quote(quote),
+            Self::Complex(complex) => complex.on_quote(quote),
+        }
+    }
+}
+
+struct TickEngine {
+    uri: String,
+    strategy: TickStrategy,
+    code: u32,
+    start: String,
+    end: String,
+}
+
+impl TickEngine {
+    fn new(uri: &str, strategy: TickStrategy, code: u32, start: &str, end: &str) -> Self {
+        Self {
+            uri: uri.into(),
+            strategy,
+            code,
+            start: start.into(),
+            end: end.into(),
+        }
+    }
+
+    fn run(&mut self) {
+        let conn = Connection::open(&self.uri).expect("open error");
+        let query = r#"
+        SELECT
+            code,
+            date_diff('day', DATE '1970-01-01', dt) AS days_since_epoch,
+            ROUND(preclose * adjfactor / 1e4, 3) AS adj_preclose,
+            ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+            ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+            ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+            ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+            ROUND(netvalue * adjfactor / 1e4, 3) AS adj_netvalue,
+            volume,
+            ROUND(amount * adjfactor / 1e4, 3) AS adj_amount,
+            -- Handle null trades_count
+            COALESCE(trades_count, 0) AS trades_count,
+            turnover
+        FROM
+            etf
+        WHERE
+            preclose IS NOT NULL
+            AND code = ?
+            AND dt BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
+    "#;
+
+        let mut stmt = conn.prepare(&query).expect("query error");
+        let rows = stmt
+            .query_map(params![self.code, self.start, self.end], |row| {
+                Ok(Tick {
+                    code: row.get(0)?,
+                    open: row.get(3)?,
+                    high: row.get(4)?,
+                    low: row.get(5)?,
+                    close: row.get(6)?,
+                })
+            })
+            .expect("parse error");
+
+        // Collect the results into a vector
+        for row in rows {
+            self.strategy.on_tick(&row.expect("row error"));
+        }
+    }
+}
+
 fn main() {
     // same strategy for diffrent codes
     let code_list: Vec<u32> = vec![510050, 513500, 159659];
