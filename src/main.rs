@@ -1,7 +1,6 @@
 use bktrader::datatype::bar::Bar;
 use duckdb::{params, Connection};
 use rayon::prelude::*;
-use std::marker::PhantomData;
 
 // Define the Tick struct
 #[derive(Debug)]
@@ -16,11 +15,8 @@ struct Tick {
 // Define Strategies
 struct StrategyA;
 struct StrategyB;
-// Add more strategies as needed (StrategyC, StrategyD, ..., StrategyZ)
 
-// The strategies are stored as Box<dyn Strategy<T>> and are accessed concurrently.
-// To safely send and reference these boxed strategies across threads, they must implement both Send and Sync.
-trait Strategy<T>: Send + Sync {
+trait Strategy<T> {
     fn on_quote(&mut self, quote: &T);
 }
 
@@ -91,30 +87,25 @@ impl FromRow for Tick {
 }
 
 // Generic Engine struct
-// PhantomData: To indicate that the Engine struct is generic over T even though it doesn't directly use it.
 struct Engine<T> {
     uri: String,
     strategies: Vec<Box<dyn Strategy<T>>>,
     code: u32,
     start: String,
     end: String,
-    _marker: PhantomData<T>,
 }
 
-// When using Rayon’s par_iter_mut(), the data (&T) is accessed concurrently across multiple threads.
-// To ensure thread safety, T must implement the Sync trait, allowing safe references to T to be shared between threads.
 impl<T> Engine<T>
 where
-    T: FromRow + std::marker::Sync,
+    T: FromRow,
 {
     fn new(uri: &str, code: u32, start: &str, end: &str) -> Self {
         Self {
             uri: uri.into(),
-            strategies: Vec::with_capacity(1000), // Adjust capacity as needed
+            strategies: Vec::with_capacity(8),
             code,
             start: start.into(),
             end: end.into(),
-            _marker: PhantomData,
         }
     }
 
@@ -151,8 +142,9 @@ where
 
         for row in rows {
             let data = row?;
-            // Parallel execution of strategies using Rayon
-            self.strategies.par_iter_mut().for_each(|stg| stg.on_quote(&data));
+            for stg in self.strategies.iter_mut() {
+                stg.on_quote(&data);
+            }
         }
 
         Ok(())
@@ -168,7 +160,8 @@ fn main() -> Result<(), duckdb::Error> {
 
     // List of codes to process
     let code_list: Vec<u32> = vec![510050, 513500, 159659];
-
+    // use rayon to parallelize the processing
+    // as code number is greater than strategy number, so parallelize the code list
     code_list.par_iter().for_each(|&code| {
         let mut engine = Engine::<Bar>::new(uri, code, start, end);
         engine.add_strategy(Box::new(StrategyA));
