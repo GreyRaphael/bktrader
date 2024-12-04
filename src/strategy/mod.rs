@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-mod base;
+pub mod base;
 mod dmac;
 mod grid;
 mod qdii;

@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 // mod backtest;
 mod broker;
-mod datatype;
-mod strategy;
+pub mod datatype;
+pub mod strategy;
 mod ta;
 
 #[pymodule]

@@ -1,70 +1,78 @@
+use bktrader::{datatype::bar::Bar, strategy::base::QuoteHandler};
 use duckdb::{params, Connection};
-use rayon::prelude::*;
 
 #[derive(Debug)]
-pub struct Bar {
-    pub code: u32,
-    pub dt: i32,
-    pub preclose: f64,
-    pub open: f64,
-    pub high: f64,
-    pub low: f64,
-    pub close: f64,
-    pub netvalue: f64,
-    pub volume: f64,
-    pub amount: f64,
-    pub trades_count: f64,
-    pub turnover: f64,
+struct Tick {
+    code: u32,
+    open: f64,
+    high: f64,
+    low: f64,
+    close: f64,
 }
 
-trait OnQuote<T> {
-    fn on_quote(&self, item: &T);
-}
+struct StrategyA;
 
-struct MyBarStrategy;
-
-impl OnQuote<Bar> for MyBarStrategy {
-    fn on_quote(&self, item: &Bar) {
-        println!("on_quote: {:?}", item);
+impl QuoteHandler<Bar> for StrategyA {
+    fn on_quote(&mut self, quote: &Bar) {
+        println!("StrategyA bar: {:?}", quote);
     }
 }
 
-struct AnotherStrategy;
-
-impl OnQuote<Bar> for AnotherStrategy {
-    fn on_quote(&self, item: &Bar) {
-        println!("AnotherStrategy received: {:?}", item);
+impl QuoteHandler<Tick> for StrategyA {
+    fn on_quote(&mut self, quote: &Tick) {
+        println!("StrategyA tick: {:?}", quote);
     }
 }
 
-trait Engine {
-    fn run(&self, code: &u32, start: &str, end: &str);
-    fn run_multi(&self, codes: &[u32], start: &str, end: &str);
-}
+struct StrategyB;
 
-struct DuckBarEngine<T>
-where
-    T: OnQuote<Bar>,
-{
-    path: String,
-    strategy: T,
-}
-
-impl<T> DuckBarEngine<T>
-where
-    T: OnQuote<Bar>,
-{
-    fn new(path: &str, strategy: T) -> Self {
-        DuckBarEngine { path: path.into(), strategy }
+impl QuoteHandler<Bar> for StrategyB {
+    fn on_quote(&mut self, quote: &Bar) {
+        println!("StrategyB bar: {:?}", quote);
     }
 }
 
-impl<T> Engine for DuckBarEngine<T>
-where
-    T: OnQuote<Bar> + std::marker::Sync,
-{
-    fn run(&self, code: &u32, start: &str, end: &str) {
-        let conn = Connection::open(&self.path).expect("open error");
+impl QuoteHandler<Tick> for StrategyB {
+    fn on_quote(&mut self, quote: &Tick) {
+        println!("StrategyB tick: {:?}", quote);
+    }
+}
+
+enum BarStrategy {
+    Simple(StrategyA),
+    Complex(StrategyB),
+}
+
+impl BarStrategy {
+    fn on_bar(&mut self, quote: &Bar) {
+        match self {
+            Self::Simple(simple) => simple.on_quote(quote),
+            Self::Complex(complex) => complex.on_quote(quote),
+        }
+    }
+}
+
+struct BarEngine {
+    uri: String,
+    strategy: BarStrategy,
+    code: u32,
+    start: String,
+    end: String,
+}
+
+impl BarEngine {
+    fn new(uri: &str, strategy: BarStrategy, code: u32, start: &str, end: &str) -> Self {
+        Self {
+            uri: uri.into(),
+            strategy,
+            code,
+            start: start.into(),
+            end: end.into(),
+        }
+    }
+
+    fn run(&mut self) {
+        let conn = Connection::open(&self.uri).expect("open error");
         let query = r#"
         SELECT
             code,
@@ -90,7 +98,7 @@ where
 
         let mut stmt = conn.prepare(&query).expect("query error");
         let rows = stmt
-            .query_map(params![code, start, end], |row| {
+            .query_map(params![self.code, self.start, self.end], |row| {
                 Ok(Bar {
                     code: row.get(0)?,
                     dt: row.get(1)?,
@@ -110,24 +118,32 @@ where
 
         // Collect the results into a vector
         for row in rows {
-            self.strategy.on_quote(&row.expect("row error"));
+            self.strategy.on_bar(&row.expect("row error"));
         }
-    }
-
-    fn run_multi(&self, codes: &[u32], start: &str, end: &str) {
-        codes.into_par_iter().for_each(|code| {
-            self.run(code, start, end);
-        });
     }
 }
 
 fn main() {
-    let stg = MyBarStrategy {};
-    let replayer = DuckBarEngine::new("bar1d.db", stg);
-    let codes = vec![510050, 513080, 513500];
-    replayer.run_multi(&codes, "2024-11-20", "2024-12-31");
+    // same strategy for diffrent codes
+    let code_list: Vec<u32> = vec![510050, 513500, 159659];
+    let mut engine_list = Vec::with_capacity(3);
+    for code in code_list {
+        let stg = BarStrategy::Simple(StrategyA {});
+        let engine = BarEngine::new("bar1d.db", stg, code, "2024-11-20", "2024-12-31");
+        engine_list.push(engine);
+    }
+    for engine in engine_list.iter_mut() {
+        engine.run();
+    }
 
-    let another_stg = AnotherStrategy {};
-    let another_replayer = DuckBarEngine::new("bar1d.db", another_stg);
-    another_replayer.run(&510050, "2024-11-20", "2024-12-31");
+    // same code for diffrent strategy
+    let strategy_list = vec![BarStrategy::Simple(StrategyA {}), BarStrategy::Complex(StrategyB {})];
+    let mut engine_list = Vec::with_capacity(2);
+    for stg in strategy_list {
+        let engine = BarEngine::new("bar1d.db", stg, 510050, "2024-11-20", "2024-12-31");
+        engine_list.push(engine);
+    }
+    for engine in engine_list.iter_mut() {
+        engine.run();
+    }
 }
