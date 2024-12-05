@@ -56,6 +56,7 @@ impl Bar {
 }
 
 // Tick
+#[allow(dead_code)]
 pub struct Tick {
     code: u32,
     dt: i64,
@@ -81,6 +82,7 @@ pub struct Tick {
 }
 
 // Order
+#[allow(dead_code)]
 pub struct Order {
     code: u32,
     dt: i64, // datetime
@@ -93,6 +95,7 @@ pub struct Order {
 }
 
 // Trade
+#[allow(dead_code)]
 pub struct Trade {
     code: u32,
     dt: i64,
