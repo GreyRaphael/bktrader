@@ -81,14 +81,18 @@ def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, 
 
 
 if __name__ == "__main__":
+    import argparse
     from bktrader import strategy
+
+    parser = argparse.ArgumentParser(description="check one etf")
+    parser.add_argument("-c", type=int, required=True, dest="code", help="etf integer code")
+    args = parser.parse_args()
 
     alt.renderers.enable("browser")
 
     uri = "bar1d.db"
     start = dt.date(2024, 3, 1)
     end = dt.date(2024, 11, 30)
-    code = 513650
     stg = strategy.GridCCI(
         init_cash=5e4,
         rank_period=20,
@@ -98,7 +102,7 @@ if __name__ == "__main__":
         profit_limit=0.08,
     )
 
-    chart = backtest_chart(uri, code, start, end, stg, chart_width=1600)
+    chart = backtest_chart(uri, args.code, start, end, stg, chart_width=1600)
 
     print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
     print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
