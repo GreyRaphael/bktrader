@@ -2,12 +2,11 @@ import altair as alt
 import datetime as dt
 import polars as pl
 import duckdb
-from bktrader import datatype
 from replayer.duck import DuckdbReplayer
 from engine import BacktestEngine
 
 
-def calc_ls_chart(positions: list[datatype.Bar]):
+def calc_ls_chart(positions: list):
     opened_list = [(pos.entry_dt, pos.id, pos.entry_price, pos.volume) for pos in positions]
     closed_list = [(pos.exit_dt, pos.id, pos.exit_price, pos.volume, pos.pnl, pos.fees) for pos in positions if pos.pnl is not None]
     df_opened = pl.from_records(opened_list, orient="row", schema=["dt", "id", "price", "volume"]).with_columns(pl.from_epoch("dt", time_unit="d"))
@@ -79,3 +78,37 @@ def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, 
     chart_ls = calc_ls_chart(strategy.broker.positions)
     chart_candle = calc_candle_chart(uri, code, start, end)
     return (chart_candle + chart_ls).properties(width=1200).configure_scale(zero=False, continuousPadding=50).interactive()
+
+
+if __name__ == "__main__":
+    from bktrader import strategy
+
+    alt.renderers.enable("browser")
+
+    uri = "bar1d.db"
+    start = dt.date(2024, 3, 1)
+    end = dt.date(2024, 11, 30)
+    code = 513650
+    stg = strategy.GridCCI(
+        init_cash=5e4,
+        rank_period=20,
+        cci_period=20,
+        rank_limit=0.1,
+        max_active_pos_len=10,
+        profit_limit=0.08,
+    )
+
+    backtest_chart(uri, code, start, end, stg, chart_width=1600)
+
+    print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
+    print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
+
+    annual_return, annual_volatility, sharpe_ratio = stg.broker.analyzer.sharpe_ratio(0.015)
+    print(f"sharpe annual_return: {annual_return:.3f}")
+    print(f"sharpe annual_volatility: {annual_volatility:.3f}")
+    print(f"sharpe sharpe_ratio: {sharpe_ratio:.3f}")
+
+    annual_return, annual_downside_deviation, sortino_ratio = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+    print(f"sortino annual_return: {annual_return:.3f}")
+    print(f"sortino annual_downside_deviation: {annual_downside_deviation:.3f}")
+    print(f"sortino sortino_ratio: {sortino_ratio:.3f}")
