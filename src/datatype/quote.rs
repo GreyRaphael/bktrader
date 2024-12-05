@@ -33,20 +33,7 @@ pub struct Bar {
 impl Bar {
     #[new]
     #[pyo3(signature = (code=0, dt=0, preclose=0.0, open=0.0, high=0.0, low=0.0, close=0.0, netvalue=0.0, volume=0.0, amount=0.0, trades_count=0.0, turnover=0.0))]
-    fn new(
-        code: u32,
-        dt: i32,
-        preclose: f64,
-        open: f64,
-        high: f64,
-        low: f64,
-        close: f64,
-        netvalue: f64,
-        volume: f64,
-        amount: f64,
-        trades_count: f64,
-        turnover: f64,
-    ) -> Self {
+    fn new(code: u32, dt: i32, preclose: f64, open: f64, high: f64, low: f64, close: f64, netvalue: f64, volume: f64, amount: f64, trades_count: f64, turnover: f64) -> Self {
         Bar {
             code,
             dt,
@@ -66,4 +53,53 @@ impl Bar {
     fn __repr__(&self) -> String {
         format!("{:?}", self)
     }
+}
+
+// Tick
+pub struct Tick {
+    code: u32,
+    dt: i64,
+    preclose: f64,
+    open: f64,
+    last: f64,
+    iopv: f64,
+    high_limit: f64,
+    low_limit: f64,
+    trades_count: f64,
+    volume: f64,
+    tot_ask_volume: f64,
+    tot_bid_volume: f64,
+    amount: f64,
+    avg_ask_price: f64,
+    avg_bid_price: f64,
+    ask_prices: [f64; 10],
+    bid_prices: [f64; 10],
+    ask_volumes: [f64; 10],
+    bid_volumes: [f64; 10],
+    ask_nums: [f64; 10],
+    bid_nums: [f64; 10],
+}
+
+// Order
+pub struct Order {
+    code: u32,
+    dt: i64, // datetime
+    seq_no: u64,
+    price: f64,
+    volume: f64,
+    bs_flag: u8,
+    order_type: u8,
+    origin_seq_no: u64,
+}
+
+// Trade
+pub struct Trade {
+    code: u32,
+    dt: i64,
+    seq_no: u64,
+    price: f64,
+    volume: f64,
+    bs_flag: u8,
+    ask_seq_no: u64,
+    bid_seq_no: u64,
 }
