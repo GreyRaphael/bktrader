@@ -77,7 +77,7 @@ def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, 
 
     chart_ls = calc_ls_chart(strategy.broker.positions)
     chart_candle = calc_candle_chart(uri, code, start, end)
-    return (chart_candle + chart_ls).properties(width=1200).configure_scale(zero=False, continuousPadding=50).interactive()
+    return (chart_candle + chart_ls).properties(width=chart_width).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
 if __name__ == "__main__":
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         profit_limit=0.08,
     )
 
-    backtest_chart(uri, code, start, end, stg, chart_width=1600)
+    chart = backtest_chart(uri, code, start, end, stg, chart_width=1600)
 
     print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
     print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
@@ -112,3 +112,5 @@ if __name__ == "__main__":
     print(f"sortino annual_return: {annual_return:.3f}")
     print(f"sortino annual_downside_deviation: {annual_downside_deviation:.3f}")
     print(f"sortino sortino_ratio: {sortino_ratio:.3f}")
+
+    chart.show()
