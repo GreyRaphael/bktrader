@@ -1,5 +1,5 @@
 use super::analyzer::Analyzer;
-use crate::datatype::{bar::Bar, position::Position, position::PositionStatus};
+use crate::datatype::{quote::Bar, position::Position, position::PositionStatus};
 use pyo3::prelude::*;
 use std::collections::HashMap;
 

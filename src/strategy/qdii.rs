@@ -1,6 +1,6 @@
 use super::base::QuoteHandler;
 use crate::broker::etf::EtfBroker;
-use crate::datatype::bar::Bar;
+use crate::datatype::quote::Bar;
 use crate::ta::momentum::CCI;
 use crate::ta::rolling::{Container, RollingRank};
 use pyo3::prelude::*;

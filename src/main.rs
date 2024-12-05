@@ -1,4 +1,4 @@
-use bktrader::datatype::bar::Bar;
+use bktrader::datatype::quote::Bar;
 use duckdb::{params, Connection};
 use rayon::prelude::*;
 

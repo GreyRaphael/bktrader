@@ -1,6 +1,6 @@
 use super::base::QuoteHandler;
 use crate::broker::etf::EtfBroker;
-use crate::datatype::bar::Bar;
+use crate::datatype::quote::Bar;
 use crate::ta::cross::Crosser;
 use crate::ta::ma::{EMA, MA};
 use crate::ta::volatility::ATR;
