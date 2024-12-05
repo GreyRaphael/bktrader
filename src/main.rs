@@ -2,8 +2,9 @@ use bktrader::datatype::quote::Bar;
 use duckdb::{params, Connection};
 use rayon::prelude::*;
 
-// Define the Tick struct
+// Define the mock Tick struct
 #[derive(Debug)]
+#[allow(dead_code)]
 struct Tick {
     code: u32,
     open: f64,
