@@ -71,7 +71,10 @@ def calc_candle_chart(uri: str, code: int, start: dt.date, end: dt.date):
 def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, chart_width: int = 1600):
     replayer = DuckdbReplayer(start, end, code, uri)
     engine = BacktestEngine(replayer, strategy)
+    dt_start = dt.datetime.now()
     engine.run()
+    time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
+    print(f"Backtest costs {time_elapsed} seconds")
 
     chart_ls = calc_ls_chart(strategy.broker.positions)
     chart_candle = calc_candle_chart(uri, code, start, end)
