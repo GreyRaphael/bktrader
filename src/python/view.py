@@ -77,7 +77,7 @@ def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, 
 
     chart_ls = calc_ls_chart(strategy.broker.positions)
     chart_candle = calc_candle_chart(uri, code, start, end)
-    return (chart_candle + chart_ls).properties(width=chart_width).configure_scale(zero=False, continuousPadding=50).interactive()
+    return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
 if __name__ == "__main__":
