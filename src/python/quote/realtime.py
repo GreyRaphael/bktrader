@@ -3,7 +3,7 @@ from bktrader import datatype
 import httpx
 
 
-class East:
+class EastBar:
     def __init__(self):
         self.client = httpx.Client(
             headers={
@@ -30,7 +30,7 @@ class East:
         delta = dt.date(year, month, day) - dt.date(1970, 1, 1)
         return delta.days
 
-    def update(self) -> list[datatype.Bar]:
+    def update(self) -> dict:
         fields = ",".join(self.mapping.keys())
         timestamp = int(dt.datetime.now().timestamp() * 1000)
         # MK0021: A
@@ -54,8 +54,8 @@ class East:
             "_": timestamp,
         }
         rsp = self.client.get("http://push2.eastmoney.com/api/qt/clist/get", params=url_params, timeout=10).json()
-        bar_list = [
-            datatype.Bar(
+        bar_dict = {
+            int(record["f12"]): datatype.Bar(
                 code=int(record["f12"]),
                 dt=self.days_since_epoch(record["f297"]),
                 preclose=record["f18"],
@@ -67,5 +67,11 @@ class East:
                 amount=record["f6"],
             )
             for record in rsp["data"]["diff"]
-        ]
-        return bar_list
+        }
+        return bar_dict
+
+
+if __name__ == "__main__":
+    east_bar = EastBar()
+    bar_dict = east_bar.update()
+    print(bar_dict)
