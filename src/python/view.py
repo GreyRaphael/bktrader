@@ -2,7 +2,6 @@ import altair as alt
 import datetime as dt
 import polars as pl
 import duckdb
-from replayer.duck import DuckdbReplayer
 from engine import BacktestEngine
 
 
@@ -68,6 +67,8 @@ def calc_candle_chart(uri: str, code: int, start: dt.date, end: dt.date):
 
 
 def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, chart_width: int = 1600):
+    from quote.history import DuckdbReplayer
+
     replayer = DuckdbReplayer(start, end, code, uri)
     engine = BacktestEngine(replayer, strategy)
     dt_start = dt.datetime.now()

@@ -11,7 +11,7 @@ class BacktestEngine:
 if __name__ == "__main__":
     import time
     import datetime as dt
-    from replayer.duck import DuckdbReplayer
+    from quote.history import DuckdbReplayer
     from bktrader import strategy
 
     replayer = DuckdbReplayer(start=dt.date(2021, 1, 1), end=dt.date(2024, 11, 30), symbol=513650, uri="bar1d.db")
