@@ -21,6 +21,7 @@ class EastBar:
             "f5": "volume",
             "f6": "amount",
             "f441": "iopv",
+            "f124": "update_time",
         }
 
     def days_since_epoch(self, value: int) -> int:
@@ -54,20 +55,28 @@ class EastBar:
             "_": timestamp,
         }
         rsp = self.client.get("http://push2.eastmoney.com/api/qt/clist/get", params=url_params, timeout=10).json()
-        bar_dict = {
-            int(record["f12"]): datatype.Bar(
-                code=int(record["f12"]),
+
+        bar_dict = {}
+        for record in rsp["data"]["diff"]:
+            update_time = dt.datetime.fromtimestamp(record["f124"])  # run after 14:00
+            afternoon_start = dt.datetime.combine(update_time.date(), dt.time(13, 0, 0))
+            time_ratio = (update_time - afternoon_start + dt.timedelta(hours=2)) / dt.timedelta(hours=4)
+            predicted_today_volume = record["f5"] / time_ratio
+            predicted_today_amount = record["f6"] / time_ratio
+
+            code = int(record["f12"])
+            bar_dict[code] = datatype.Bar(
+                code=code,
                 dt=self.days_since_epoch(record["f297"]),
                 preclose=record["f18"],
                 open=record["f17"],
                 high=record["f15"],
                 low=record["f16"],
                 close=record["f2"],
-                volume=record["f5"],
-                amount=record["f6"],
+                volume=predicted_today_volume,
+                amount=predicted_today_amount,
             )
-            for record in rsp["data"]["diff"]
-        }
+
         return bar_dict
 
 
