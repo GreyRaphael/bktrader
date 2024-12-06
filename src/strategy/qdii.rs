@@ -21,6 +21,7 @@ pub struct GridCCI {
 
 impl QuoteHandler<Bar> for GridCCI {
     fn on_quote(&mut self, bar: &Bar) {
+        // in real-time quote, amount & volume should be a predicted value by real-time amount & volume
         let vwap = bar.amount / bar.volume;
         let cci_val = self.cci.update(bar.high, bar.low, vwap);
         let cci_rank = self.ranker.update(cci_val);
