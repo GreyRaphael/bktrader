@@ -1,10 +1,11 @@
 use pyo3::prelude::*;
 pub mod cross;
+pub mod cumulative;
+pub mod cycle;
 pub mod ma;
+pub mod momentum;
 pub mod rolling;
 pub mod volatility;
-pub mod momentum;
-pub mod cycle;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let ta = PyModule::new(parent_module.py(), "ta")?;
@@ -13,6 +14,9 @@ pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     ta.add_class::<rolling::RollingMin>()?;
     ta.add_class::<rolling::RollingQuantile>()?;
     ta.add_class::<rolling::RollingRank>()?;
+    ta.add_class::<cumulative::CumMin>()?;
+    ta.add_class::<cumulative::CumMax>()?;
+    ta.add_class::<cumulative::CumMinMax>()?;
     ta.add_class::<ma::SMA>()?;
     ta.add_class::<ma::WMA>()?;
     ta.add_class::<ma::EMA>()?;
