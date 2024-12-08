@@ -58,3 +58,26 @@ impl CumMinMax {
         (self.min, self.max)
     }
 }
+
+#[pyclass]
+pub struct CumMean {
+    count: usize,
+    sum: f64,
+}
+
+#[pymethods]
+impl CumMean {
+    #[new]
+    pub fn new() -> Self {
+        Self { count: 0, sum: 0.0 }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        if new_val.is_finite() {
+            self.count += 1;
+            self.sum += new_val;
+        }
+
+        self.sum / self.count as f64
+    }
+}
