@@ -81,3 +81,38 @@ impl CumMean {
         self.sum / self.count as f64
     }
 }
+
+#[pyclass]
+pub struct CumMedian {
+    values: Vec<f64>,
+}
+
+#[pymethods]
+impl CumMedian {
+    #[new]
+    pub fn new() -> Self {
+        Self { values: Vec::with_capacity(512) }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        if new_val.is_finite() {
+            let pos = self.values.binary_search_by(|v| v.partial_cmp(&new_val).unwrap()).unwrap_or_else(|e| e);
+            self.values.insert(pos, new_val);
+        }
+        self.median()
+    }
+
+    fn median(&self) -> f64 {
+        let length = self.values.len();
+        if length == 0 {
+            return f64::NAN;
+        }
+
+        if length % 2 == 0 {
+            let mid = length / 2;
+            (self.values[mid - 1] + self.values[mid]) / 2.0
+        } else {
+            self.values[length / 2]
+        }
+    }
+}

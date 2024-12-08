@@ -19,6 +19,7 @@ pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     ta.add_class::<cumulative::CumMax>()?;
     ta.add_class::<cumulative::CumMinMax>()?;
     ta.add_class::<cumulative::CumMean>()?;
+    ta.add_class::<cumulative::CumMedian>()?;
     ta.add_class::<ma::SMA>()?;
     ta.add_class::<ma::WMA>()?;
     ta.add_class::<ma::EMA>()?;
