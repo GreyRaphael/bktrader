@@ -112,6 +112,49 @@ impl RollingSum {
     }
 }
 
+// no NAN rolling average
+#[pyclass]
+pub struct RollingMean {
+    container: Container,
+    nan_count: usize,
+    sum: f64,
+}
+
+#[pymethods]
+impl RollingMean {
+    #[new]
+    pub fn new(n: usize) -> Self {
+        Self {
+            container: Container::new(n),
+            nan_count: n,
+            sum: 0.0,
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        let old_val = self.container.head();
+        self.container.update(new_val);
+
+        if old_val.is_finite() {
+            self.sum -= old_val;
+        } else {
+            self.nan_count -= 1;
+        }
+
+        if new_val.is_finite() {
+            self.sum += new_val;
+        } else {
+            self.nan_count += 1;
+        }
+
+        if self.nan_count > 0 {
+            self.sum / (self.container.len() - self.nan_count) as f64
+        } else {
+            self.sum / self.container.len() as f64
+        }
+    }
+}
+
 #[pyclass]
 pub struct RollingMax {
     container: Container,

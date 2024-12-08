@@ -14,6 +14,7 @@ pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     ta.add_class::<rolling::RollingMin>()?;
     ta.add_class::<rolling::RollingQuantile>()?;
     ta.add_class::<rolling::RollingRank>()?;
+    ta.add_class::<rolling::RollingMean>()?;
     ta.add_class::<cumulative::CumMin>()?;
     ta.add_class::<cumulative::CumMax>()?;
     ta.add_class::<cumulative::CumMinMax>()?;
