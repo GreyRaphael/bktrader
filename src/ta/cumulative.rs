@@ -116,3 +116,44 @@ impl CumMedian {
         }
     }
 }
+
+#[pyclass]
+pub struct CumQuantile {
+    quantile: f64,
+    dataset: Vec<f64>,
+}
+
+#[pymethods]
+impl CumQuantile {
+    #[new]
+    pub fn new(quantile: f64) -> Self {
+        Self {
+            quantile,
+            dataset: Vec::with_capacity(512),
+        }
+    }
+
+    pub fn update(&mut self, new_val: f64) -> f64 {
+        if new_val.is_finite() {
+            let pos = self.dataset.binary_search_by(|v| v.partial_cmp(&new_val).unwrap()).unwrap_or_else(|e| e);
+            self.dataset.insert(pos, new_val);
+        }
+        self.quantile()
+    }
+
+    fn quantile(&self) -> f64 {
+        let length = self.dataset.len();
+        if length == 0 {
+            return f64::NAN;
+        }
+
+        let index = (self.dataset.len() - 1) as f64 * self.quantile;
+        let lower_index = index.floor() as usize;
+        let fraction = index - lower_index as f64;
+
+        let lower_value = self.dataset[lower_index];
+        let upper_value = if lower_index + 1 < self.dataset.len() { self.dataset[lower_index + 1] } else { lower_value };
+
+        lower_value + fraction * (upper_value - lower_value)
+    }
+}
