@@ -78,7 +78,7 @@ class EastQuote:
             else:
                 time_ratio = 1.0
 
-            predicted_today_volume = record["f5"] / time_ratio
+            predicted_today_volume = record["f5"] * 1e2 / time_ratio  # 1e2单位手换算成股
             predicted_today_amount = record["f6"] / time_ratio
 
             code = int(record["f12"])
