@@ -59,8 +59,22 @@ class EastBar:
         bar_dict = {}
         for record in rsp["data"]["diff"]:
             update_time = dt.datetime.fromtimestamp(record["f124"])  # run after 14:00
+
+            morning_start = dt.datetime.combine(update_time.date(), dt.time(9, 30, 0))
+            morning_end = dt.datetime.combine(update_time.date(), dt.time(11, 30, 0))
             afternoon_start = dt.datetime.combine(update_time.date(), dt.time(13, 0, 0))
-            time_ratio = (update_time - afternoon_start + dt.timedelta(hours=2)) / dt.timedelta(hours=4)
+            afternoon_end = dt.datetime.combine(update_time.date(), dt.time(15, 0, 0))
+            if update_time < morning_start:
+                return {}
+            elif update_time <= morning_end:
+                time_ratio = (update_time - morning_start) / dt.timedelta(hours=4)
+            elif update_time < afternoon_start:
+                time_ratio = 0.5
+            elif update_time <= afternoon_end:
+                time_ratio = (update_time - afternoon_start + dt.timedelta(hours=2)) / dt.timedelta(hours=4)
+            else:
+                time_ratio = 1.0
+
             predicted_today_volume = record["f5"] / time_ratio
             predicted_today_amount = record["f6"] / time_ratio
 
