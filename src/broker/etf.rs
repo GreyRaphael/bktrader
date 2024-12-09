@@ -105,6 +105,7 @@ impl EtfBroker {
     pub fn update_portfolio_value(&mut self, bar: &Bar) {
         self.portfolio_value = self.cash + self.active_positions_sum() * bar.close;
         self.analyzer.update(self.portfolio_value);
+        self.update_active_pnl(bar);
     }
 
     pub fn update_active_pnl(&mut self, bar: &Bar) {
@@ -157,6 +158,28 @@ impl EtfBroker {
 
     pub fn profit_gross(&self) -> f64 {
         self.profit_net() + self.loss_fees()
+    }
+
+    pub fn securities_cost(&self) -> f64 {
+        self.positions.iter().map(|pos| pos.entry_price * pos.volume + pos.fees).sum()
+    }
+
+    pub fn profit_float(&self) -> f64 {
+        self.positions.iter().map(|pos| pos.pnl.unwrap()).sum()
+    }
+
+    pub fn profit_active(&self) -> f64 {
+        self.positions.iter().filter(|pos| pos.status == PositionStatus::Opened).map(|pos| pos.pnl.unwrap()).sum()
+    }
+
+    pub fn profit_taken(&self) -> f64 {
+        self.positions.iter().filter(|pos| pos.status == PositionStatus::Closed).map(|pos| pos.pnl.unwrap()).sum()
+    }
+
+    pub fn profit_position(&self) -> f64 {
+        let tot_cost = self.securities_cost();
+        let float_profit = self.profit_float();
+        float_profit / tot_cost
     }
 
     pub fn loss_net(&self) -> f64 {
