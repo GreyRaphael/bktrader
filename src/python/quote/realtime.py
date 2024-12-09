@@ -1,5 +1,4 @@
 import datetime as dt
-from bktrader import datatype
 import httpx
 
 
@@ -79,16 +78,16 @@ class EastBar:
             predicted_today_amount = record["f6"] / time_ratio
 
             code = int(record["f12"])
-            bar_dict[code] = datatype.Bar(
-                code=code,
-                dt=self.days_since_epoch(record["f297"]),
-                preclose=record["f18"],
-                open=record["f17"],
-                high=record["f15"],
-                low=record["f16"],
-                close=record["f2"],
-                volume=predicted_today_volume,
-                amount=predicted_today_amount,
+            bar_dict[code] = (
+                code,  # code
+                self.days_since_epoch(record["f297"]),  # dt
+                record["f18"],  # preclose
+                record["f17"],  # open
+                record["f15"],  # high
+                record["f16"],  # low
+                record["f2"],  # close
+                predicted_today_volume,  # volume
+                predicted_today_amount,  # amount
             )
 
         return bar_dict
