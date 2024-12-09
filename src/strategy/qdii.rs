@@ -53,7 +53,7 @@ impl QuoteHandler<Bar> for GridCCI {
         }
 
         if self.available_pos_num > 0 {
-            // println!("cci={}, quantile_val={}",cci_val, quantile_val);
+            // println!("dt={}, cci={}, quantile_val={}, rank={}", bar.dt, cci_val, quantile_val, cci_rank);
             if (vol_tail / vol_head < 1.0) && (cci_val < f64::min(self.cci_threshold, quantile_val)) && (cci_rank < self.rank_limit) {
                 let multiplier = 1.1_f64.powi((self.max_pos_num - self.available_pos_num) as i32);
                 let entry_size = (self.entry_amount * multiplier / vwap / 100.0).floor() * 100.0;
@@ -67,13 +67,13 @@ impl QuoteHandler<Bar> for GridCCI {
 #[pymethods]
 impl GridCCI {
     #[new]
-    #[pyo3(signature = (init_cash=5e5, rank_period=60, cci_period=20, cci_threshold=-0.1, cci_quantile=0.3, ma_type="sma", rank_limit=0.1, max_active_pos_len=6, profit_limit=0.1, loss_limit=-1.0))]
+    #[pyo3(signature = (init_cash=5e5, rank_period=15, cci_period=20, cci_threshold=-0.1, cum_quantile=0.3, ma_type="sma", rank_limit=0.1, max_active_pos_len=6, profit_limit=0.1, loss_limit=-1.0))]
     pub fn new(
         init_cash: f64,
         rank_period: usize,
         cci_period: usize,
         cci_threshold: f64,
-        cci_quantile: f64,
+        cum_quantile: f64,
         ma_type: &str,
         rank_limit: f64,
         max_active_pos_len: usize,
@@ -85,7 +85,7 @@ impl GridCCI {
             broker: EtfBroker::new(init_cash, 5.0, 1.5e-4),
             cci: CCI::new(cci_period, ma_type),
             vol_differ: Container::new(2),
-            quantiler: CumQuantile::new(cci_quantile),
+            quantiler: CumQuantile::new(cum_quantile),
             cci_threshold,
             ranker: RollingRank::new(rank_period),
             rank_limit,
