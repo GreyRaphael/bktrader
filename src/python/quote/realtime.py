@@ -1,9 +1,13 @@
+import math
 import datetime as dt
 import httpx
+import duckdb
+from bktrader import datatype
 
 
 class EastQuote:
-    def __init__(self):
+    def __init__(self, uri: str):
+        self.uri = uri
         self.client = httpx.Client(
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0",
@@ -30,7 +34,7 @@ class EastQuote:
         delta = dt.date(year, month, day) - dt.date(1970, 1, 1)
         return delta.days
 
-    def update(self) -> dict:
+    def update(self):
         fields = ",".join(self.mapping.keys())
         timestamp = int(dt.datetime.now().timestamp() * 1000)
         # MK0021: A
@@ -90,10 +94,30 @@ class EastQuote:
                 predicted_today_amount,  # amount
             )
 
-        return bar_dict
+        self.realtime_bars = bar_dict
+
+    def get_quote(self, code: int) -> datatype.Bar:
+        with duckdb.connect(self.uri, read_only=True) as conn:
+            query = "SELECT ROUND(close/1e4, 3), adjfactor FROM etf WHERE code=? ORDER BY dt DESC LIMIT 1"
+            last_close, factor = conn.execute(query, [code]).fetchone()
+        code, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.realtime_bars[code]
+        adjfactor = factor if math.isclose(last_close, preclose) else last_close / preclose * factor
+        # print("prev", factor, "now", adjfactor)
+        return datatype.Bar(
+            code=code,
+            dt=dt,
+            preclose=round(preclose * adjfactor, 3),
+            open=round(open * adjfactor, 3),
+            high=round(high * adjfactor, 3),
+            low=round(low * adjfactor, 3),
+            close=round(last * adjfactor, 3),
+            volume=predicted_vol,
+            amount=round(predicted_amt * adjfactor, 3),
+        )
 
 
 if __name__ == "__main__":
-    east_bar = EastQuote()
-    bar_dict = east_bar.update()
-    print(bar_dict)
+    east_bar = EastQuote(uri="bar1d.db")
+    east_bar.update()
+    print(east_bar.get_quote(513650))
+    print(east_bar.get_quote(159659))
