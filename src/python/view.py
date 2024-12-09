@@ -8,6 +8,7 @@ from engine import BacktestEngine, TradeEngine
 def calc_ls_chart(positions: list):
     opened_list = [(pos.entry_dt, pos.id, pos.entry_price, pos.volume) for pos in positions]
     closed_list = [(pos.exit_dt, pos.id, pos.exit_price, pos.volume, pos.pnl, pos.fees) for pos in positions if pos.pnl is not None]
+    print(len(opened_list), len(closed_list))
     df_opened = pl.from_records(opened_list, orient="row", schema=["dt", "id", "price", "volume"]).with_columns(pl.from_epoch("dt", time_unit="d"))
     df_closed = pl.from_records(closed_list, orient="row", schema=["dt", "id", "price", "volume", "pnl", "fees"]).with_columns(pl.from_epoch("dt", time_unit="d"))
 
@@ -108,7 +109,7 @@ if __name__ == "__main__":
     alt.renderers.enable("browser")
 
     uri = "bar1d.db"
-    start = dt.date(2024, 3, 1)
+    start = dt.date(2024, 1, 1)
     end = dt.date.today()
     stg = strategy.GridCCI(
         init_cash=5e4,
@@ -118,7 +119,7 @@ if __name__ == "__main__":
         cci_quantile=0.25,
         rank_limit=0.15,
         max_active_pos_len=10,
-        profit_limit=0.15,
+        profit_limit=0.10,
     )
 
     chart = backtest_chart(uri, args.code, start, end, stg, chart_width=1600)
