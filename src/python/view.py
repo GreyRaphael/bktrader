@@ -6,30 +6,34 @@ from engine import BacktestEngine, TradeEngine
 
 
 def calc_ls_chart(positions: list):
-    opened_list = [(pos.entry_dt, pos.id, pos.entry_price, pos.volume) for pos in positions]
-    closed_list = [(pos.exit_dt, pos.id, pos.exit_price, pos.volume, pos.pnl, pos.fees) for pos in positions if pos.pnl is not None]
-    print(len(opened_list), len(closed_list))
-    df_opened = pl.from_records(opened_list, orient="row", schema=["dt", "id", "price", "volume"]).with_columns(pl.from_epoch("dt", time_unit="d"))
-    df_closed = pl.from_records(closed_list, orient="row", schema=["dt", "id", "price", "volume", "pnl", "fees"]).with_columns(pl.from_epoch("dt", time_unit="d"))
+    if not positions:  # empty positions
+        return alt.layer()
 
+    opened_list = [(pos.entry_dt, pos.id, pos.entry_price, pos.volume) for pos in positions]
+    df_opened = pl.from_records(opened_list, orient="row", schema=["dt", "id", "price", "volume"]).with_columns(pl.from_epoch("dt", time_unit="d"))
     long_base = alt.Chart(df_opened).encode(alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45), tooltip=["dt", "id", "price", "volume"])
     long_markers = long_base.mark_point(shape="triangle-up", color="blue", yOffset=20).encode(y="price")
     long_texts = long_base.mark_text(align="center", baseline="top", yOffset=35, color="blue").encode(y="price", text="id")
+    layers = long_markers + long_texts
 
-    short_base = (
-        alt.Chart(df_closed)
-        .transform_window(
-            cumulative_count="count()",
-            groupby=["dt", "price"],
+    closed_list = [(pos.exit_dt, pos.id, pos.exit_price, pos.volume, pos.pnl, pos.fees) for pos in positions if pos.pnl is not None]
+    if len(closed_list) > 0:
+        df_closed = pl.from_records(closed_list, orient="row", schema=["dt", "id", "price", "volume", "pnl", "fees"]).with_columns(pl.from_epoch("dt", time_unit="d"))
+        short_base = (
+            alt.Chart(df_closed)
+            .transform_window(
+                cumulative_count="count()",
+                groupby=["dt", "price"],
+            )
+            .encode(
+                alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
+                tooltip=["dt", "id", "volume", "price", "pnl", "fees"],
+            )
         )
-        .encode(
-            alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
-            tooltip=["dt", "id", "volume", "price", "pnl", "fees"],
-        )
-    )
-    short_markers = short_base.mark_point(shape="triangle-down", color="brown", yOffset=-20).encode(y="price")
-    short_texts = short_base.mark_text(align="center", baseline="bottom", dy=alt.expr("-10*datum.cumulative_count-15"), color="brown").encode(y="price", text="id")
-    return long_markers + long_texts + short_markers + short_texts
+        short_markers = short_base.mark_point(shape="triangle-down", color="brown", yOffset=-20).encode(y="price")
+        short_texts = short_base.mark_text(align="center", baseline="bottom", dy=alt.expr("-10*datum.cumulative_count-15"), color="brown").encode(y="price", text="id")
+        layers += short_markers + short_texts
+    return layers
 
 
 def calc_candle_chart(uri: str, code: int, start: dt.date, end: dt.date):
@@ -109,17 +113,17 @@ if __name__ == "__main__":
     alt.renderers.enable("browser")
 
     uri = "bar1d.db"
-    start = dt.date(2024, 1, 1)
     end = dt.date.today()
+    start = dt.date(end.year, 1, 1)
     stg = strategy.GridCCI(
-        init_cash=5e4,
-        rank_period=10,
-        cci_period=20,
-        cci_threshold=-0.1,
-        cci_quantile=0.25,
-        rank_limit=0.15,
-        max_active_pos_len=10,
-        profit_limit=0.10,
+        init_cash=1e5,
+        cum_quantile=0.3,
+        rank_period=15,
+        rank_limit=0.3,
+        cci_threshold=0.0,
+        max_active_pos_len=25,
+        profit_limit=0.15,
+        # profit_limit=0.08,
     )
 
     chart = backtest_chart(uri, args.code, start, end, stg, chart_width=1600)
