@@ -113,17 +113,17 @@ if __name__ == "__main__":
     alt.renderers.enable("browser")
 
     uri = "bar1d.db"
-    start = dt.date(2024, 3, 1)
     end = dt.date.today()
+    start = dt.date(end.year, 1, 1)
     stg = strategy.GridCCI(
-        init_cash=5e4,
-        rank_period=10,
-        cci_period=20,
-        cci_threshold=-0.1,
-        cci_quantile=0.25,
-        rank_limit=0.15,
-        max_active_pos_len=10,
+        init_cash=1e5,
+        cum_quantile=0.3,
+        rank_period=15,
+        rank_limit=0.3,
+        cci_threshold=0.0,
+        max_active_pos_len=25,
         profit_limit=0.15,
+        # profit_limit=0.08,
     )
 
     chart = backtest_chart(uri, args.code, start, end, stg, chart_width=1600)
