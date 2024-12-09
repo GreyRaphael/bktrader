@@ -1,5 +1,5 @@
 use super::analyzer::Analyzer;
-use crate::datatype::{quote::Bar, position::Position, position::PositionStatus};
+use crate::datatype::{position::Position, position::PositionStatus, quote::Bar};
 use pyo3::prelude::*;
 use std::collections::HashMap;
 
@@ -111,6 +111,14 @@ impl EtfBroker {
         self.positions.iter_mut().filter(|pos| pos.status == PositionStatus::Opened).for_each(|pos| {
             pos.pnl = Some((bar.close - pos.entry_price) * pos.volume);
         });
+    }
+
+    pub fn position_first(&self) -> Option<Position> {
+        self.positions.first().copied()
+    }
+
+    pub fn position_last(&self) -> Option<Position> {
+        self.positions.last().copied()
     }
 
     pub fn active_position_first(&self) -> Option<Position> {
