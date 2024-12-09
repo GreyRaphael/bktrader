@@ -2,7 +2,7 @@ import altair as alt
 import datetime as dt
 import polars as pl
 import duckdb
-from engine import BacktestEngine
+from engine import BacktestEngine, TradeEngine
 
 
 def calc_ls_chart(positions: list):
@@ -75,6 +75,22 @@ def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, 
     engine.run()
     time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
     print(f"Backtest costs {time_elapsed} seconds")
+
+    chart_ls = calc_ls_chart(strategy.broker.positions)
+    chart_candle = calc_candle_chart(uri, code, start, end)
+    return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
+
+
+def realtime_chart(uri: str, code: int, start: dt.date, last_quote, strategy, chart_width: int = 1600):
+    from quote.history import DuckdbReplayer
+
+    end = dt.date.today()
+    replayer = DuckdbReplayer(start, end, code, uri)
+    engine = TradeEngine(replayer, last_quote, strategy)
+    dt_start = dt.datetime.now()
+    engine.run()
+    time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
+    print(f"realtime costs {time_elapsed} seconds")
 
     chart_ls = calc_ls_chart(strategy.broker.positions)
     chart_candle = calc_candle_chart(uri, code, start, end)
