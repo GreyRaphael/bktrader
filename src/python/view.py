@@ -71,6 +71,51 @@ def calc_candle_chart(uri: str, code: int, start: dt.date, end: dt.date):
     return rule + bar
 
 
+def calc_realtime_candle_chart(uri: str, code: int, start: dt.date, last_quote):
+    query = """
+    SELECT
+        dt,
+        ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+        ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+        ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+        ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+    FROM
+        etf
+    WHERE 
+        code = ? AND dt BETWEEN ? AND ?
+    """
+    with duckdb.connect(uri) as conn:
+        df = conn.execute(query, [code, start, dt.date.today()]).pl()
+
+    df_today = pl.DataFrame(
+        {
+            "dt": last_quote.dt,
+            "adj_open": last_quote.open,
+            "adj_high": last_quote.high,
+            "adj_low": last_quote.low,
+            "adj_close": last_quote.close,
+        }
+    ).with_columns(pl.from_epoch("dt", time_unit="d"))
+    df_combined = pl.concat([df, df_today])
+
+    open_close_color = alt.condition("datum.adj_close>datum.adj_open", alt.value("red"), alt.value("green"))
+    base = alt.Chart(df_combined).encode(
+        alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
+        color=open_close_color,
+        tooltip=["dt", "adj_open", "adj_high", "adj_low", "adj_close"],
+    )
+    rule = base.mark_rule().encode(alt.Y("adj_low").title("Price"), alt.Y2("adj_high"))
+    bar = base.mark_bar(
+        fillOpacity=0,  # Make the bar hollow
+        strokeWidth=1.5,  # Define the stroke width
+    ).encode(
+        y="adj_open",
+        y2="adj_close",
+        stroke=open_close_color,
+    )
+    return rule + bar
+
+
 def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
@@ -98,7 +143,8 @@ def realtime_chart(uri: str, code: int, start: dt.date, last_quote, strategy, ch
     print(f"realtime costs {time_elapsed} seconds")
 
     chart_ls = calc_ls_chart(strategy.broker.positions)
-    chart_candle = calc_candle_chart(uri, code, start, end)
+    chart_candle = calc_realtime_candle_chart(uri, code, start, last_quote)
+
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
