@@ -2,7 +2,7 @@ import datetime as dt
 import httpx
 
 
-class EastBar:
+class EastQuote:
     def __init__(self):
         self.client = httpx.Client(
             headers={
@@ -94,6 +94,6 @@ class EastBar:
 
 
 if __name__ == "__main__":
-    east_bar = EastBar()
+    east_bar = EastQuote()
     bar_dict = east_bar.update()
     print(bar_dict)
