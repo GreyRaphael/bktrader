@@ -85,7 +85,7 @@ class EastBar:
                 record["f17"],  # open
                 record["f15"],  # high
                 record["f16"],  # low
-                record["f2"],  # close
+                record["f2"],  # last
                 predicted_today_volume,  # volume
                 predicted_today_amount,  # amount
             )
