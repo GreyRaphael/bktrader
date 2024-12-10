@@ -5,7 +5,8 @@ import duckdb
 from engine import BacktestEngine, TradeEngine
 
 
-def calc_ls_chart(positions: list):
+# long-short markers and texts
+def draw_ls_chart(positions: list):
     if not positions:  # empty positions
         return alt.layer()
 
@@ -36,23 +37,7 @@ def calc_ls_chart(positions: list):
     return layers
 
 
-def calc_candle_chart(uri: str, code: int, start: dt.date, end: dt.date):
-    query = """
-    SELECT
-        dt,
-        ROUND(open * adjfactor / 1e4, 3) AS adj_open,
-        ROUND(high * adjfactor / 1e4, 3) AS adj_high,
-        ROUND(low * adjfactor / 1e4, 3) AS adj_low,
-        ROUND(close * adjfactor / 1e4, 3) AS adj_close,
-    FROM
-        etf
-    WHERE 
-        code = ? AND dt BETWEEN ? AND ?
-    """
-
-    with duckdb.connect(uri) as conn:
-        df = conn.execute(query, [code, start, end]).pl()
-
+def draw_candle_chart(df: pl.DataFrame):
     open_close_color = alt.condition("datum.adj_close>datum.adj_open", alt.value("red"), alt.value("green"))
     base = alt.Chart(df).encode(
         alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
@@ -71,7 +56,7 @@ def calc_candle_chart(uri: str, code: int, start: dt.date, end: dt.date):
     return rule + bar
 
 
-def calc_realtime_candle_chart(uri: str, code: int, start: dt.date, last_quote):
+def draw_history_candles(code: int, start: dt.date, end: dt.date, uri: str = "bar1d.db"):
     query = """
     SELECT
         dt,
@@ -85,7 +70,25 @@ def calc_realtime_candle_chart(uri: str, code: int, start: dt.date, last_quote):
         code = ? AND dt BETWEEN ? AND ?
     """
     with duckdb.connect(uri) as conn:
-        df = conn.execute(query, [code, start, dt.date.today()]).pl()
+        df = conn.execute(query, [code, start, end]).pl()
+    return draw_candle_chart(df)
+
+
+def draw_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "bar1d.db"):
+    query = """
+    SELECT
+        dt,
+        ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+        ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+        ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+        ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+    FROM
+        etf
+    WHERE 
+        code = ? AND dt BETWEEN ? AND ?
+    """
+    with duckdb.connect(uri) as conn:
+        df_history = conn.execute(query, [code, start, dt.date.today()]).pl()
 
     df_today = pl.DataFrame(
         {
@@ -96,27 +99,11 @@ def calc_realtime_candle_chart(uri: str, code: int, start: dt.date, last_quote):
             "adj_close": last_quote.close,
         }
     ).with_columns(pl.from_epoch("dt", time_unit="d"))
-    df_combined = pl.concat([df, df_today])
-
-    open_close_color = alt.condition("datum.adj_close>datum.adj_open", alt.value("red"), alt.value("green"))
-    base = alt.Chart(df_combined).encode(
-        alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
-        color=open_close_color,
-        tooltip=["dt", "adj_open", "adj_high", "adj_low", "adj_close"],
-    )
-    rule = base.mark_rule().encode(alt.Y("adj_low").title("Price"), alt.Y2("adj_high"))
-    bar = base.mark_bar(
-        fillOpacity=0,  # Make the bar hollow
-        strokeWidth=1.5,  # Define the stroke width
-    ).encode(
-        y="adj_open",
-        y2="adj_close",
-        stroke=open_close_color,
-    )
-    return rule + bar
+    df_combined = pl.concat([df_history, df_today])
+    return draw_candle_chart(df_combined)
 
 
-def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, chart_width: int = 1600):
+def backtest_chart(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
     replayer = DuckdbReplayer(start, end, code, uri)
@@ -126,12 +113,12 @@ def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, 
     time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
     print(f"Backtest costs {time_elapsed} seconds")
 
-    chart_ls = calc_ls_chart(strategy.broker.positions)
-    chart_candle = calc_candle_chart(uri, code, start, end)
+    chart_ls = draw_ls_chart(strategy.broker.positions)
+    chart_candle = draw_history_candles(code, start, end, uri)
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
-def realtime_chart(uri: str, code: int, start: dt.date, last_quote, strategy, chart_width: int = 1600):
+def realtime_chart(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
     end = dt.date.today()
@@ -142,9 +129,8 @@ def realtime_chart(uri: str, code: int, start: dt.date, last_quote, strategy, ch
     time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
     print(f"realtime costs {time_elapsed} seconds")
 
-    chart_ls = calc_ls_chart(strategy.broker.positions)
-    chart_candle = calc_realtime_candle_chart(uri, code, start, last_quote)
-
+    chart_ls = draw_ls_chart(strategy.broker.positions)
+    chart_candle = draw_realtime_candles(code, start, last_quote, uri)
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
