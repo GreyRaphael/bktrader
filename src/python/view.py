@@ -103,7 +103,7 @@ def draw_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "bar
     return draw_candle_chart(df_combined)
 
 
-def backtest_chart(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
+def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
     replayer = DuckdbReplayer(start, end, code, uri)
@@ -118,7 +118,7 @@ def backtest_chart(code: int, start: dt.date, end: dt.date, strategy, uri: str =
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
-def realtime_chart(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
+def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
     end = dt.date.today()
@@ -132,6 +132,21 @@ def realtime_chart(code: int, start: dt.date, last_quote, strategy, uri: str = "
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_realtime_candles(code, start, last_quote, uri)
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
+
+
+def benchmark_strategy(stg):
+    print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
+    print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
+
+    annual_return, annual_volatility, sharpe_ratio = stg.broker.analyzer.sharpe_ratio(0.015)
+    print(f"sharpe annual_return: {annual_return:.3f}")
+    print(f"sharpe annual_volatility: {annual_volatility:.3f}")
+    print(f"sharpe sharpe_ratio: {sharpe_ratio:.3f}")
+
+    annual_return, annual_downside_deviation, sortino_ratio = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+    print(f"sortino annual_return: {annual_return:.3f}")
+    print(f"sortino annual_downside_deviation: {annual_downside_deviation:.3f}")
+    print(f"sortino sortino_ratio: {sortino_ratio:.3f}")
 
 
 def history(args):
@@ -149,7 +164,8 @@ def history(args):
         # profit_limit=0.08,
     )
 
-    chart = backtest_chart(args.code, args.start_dt, args.end_dt, stg, args.uri, chart_width=2000)
+    chart = backtest_history(args.code, args.start_dt, args.end_dt, stg, args.uri, chart_width=2000)
+    benchmark_strategy(stg)
     chart.show()
 
 
@@ -171,7 +187,8 @@ def realtime(args):
 
     quoter = XueQiuQuote(args.uri)
     last_quote = quoter.get_quote(args.code)
-    chart = realtime_chart(args.code, args.start_dt, last_quote, stg, args.uri, chart_width=2000)
+    chart = backtest_realtime(args.code, args.start_dt, last_quote, stg, args.uri, chart_width=2000)
+    benchmark_strategy(stg)
     chart.show()
 
 
@@ -195,16 +212,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.func(args)
-
-    # print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
-    # print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
-
-    # annual_return, annual_volatility, sharpe_ratio = stg.broker.analyzer.sharpe_ratio(0.015)
-    # print(f"sharpe annual_return: {annual_return:.3f}")
-    # print(f"sharpe annual_volatility: {annual_volatility:.3f}")
-    # print(f"sharpe sharpe_ratio: {sharpe_ratio:.3f}")
-
-    # annual_return, annual_downside_deviation, sortino_ratio = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-    # print(f"sortino annual_return: {annual_return:.3f}")
-    # print(f"sortino annual_downside_deviation: {annual_downside_deviation:.3f}")
-    # print(f"sortino sortino_ratio: {sortino_ratio:.3f}")
