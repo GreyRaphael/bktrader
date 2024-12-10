@@ -24,6 +24,11 @@ def predicted_close_ratio(update_time: dt.datetime):
 
 
 class EastQuote:
+    """
+    get quotes of all etf
+    source: http://quote.eastmoney.com/center/gridlist.html#fund_etf
+    """
+
     def __init__(self, uri: str):
         self.uri = uri
         self.client = httpx.Client(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"})
@@ -112,9 +117,52 @@ class EastQuote:
         )
 
 
+class EastSingleQuote:
+    """
+    get quote of single stock or etf
+    not recommended bad than XueQiuQuote
+    source: http://quote.eastmoney.com/sz159526.html
+    """
+
+    def __init__(self, uri: str):
+        self.uri = uri
+        self.client = httpx.Client(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"})
+        self.mapping = {
+            "f57": "code",
+            "f86": "update_time",
+            "f60": "preclose",
+            "f46": "open",
+            "f44": "high",
+            "f45": "low",
+            "f43": "last",
+            "f47": "volume",  # 手
+            "f48": "amount",
+            # "f168": "turnover",
+            # "f49": "tot_bid",  # buy
+            # "f161": "tot_ask",
+            # "f50": "qrr",
+            # "f51": "high_limit",
+            # "f52": "low_limit",
+            # "f71": "vwap",
+            # 'f84':'tot_share',
+            # 'f85':'float_share',
+            # 'f116':'tot_mkt_val',
+            # 'f117':'float_mkt_val',
+        }
+
+    def get_quote(self, code: int):
+        url_params = {
+            "secid": f"1.{code}" if code > 500000 else f"0.{code}",
+            "ut": "f057cbcbce2a86e2866ab8877db1d059",
+            "_": int(dt.datetime.now().timestamp() * 1000),
+        }
+        quote = self.client.get("https://push2.eastmoney.com/api/qt/stock/get", params=url_params, timeout=5).json()["data"]
+        return quote
+
+
 class XueQiuQuote:
     """
-    get quote of single code
+    get quote of single code (can also for stock or etf)
     source: https://xueqiu.com/S/SH600000
     """
 
