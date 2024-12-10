@@ -9,14 +9,14 @@ def calc_ls_chart(positions: list):
     if not positions:  # empty positions
         return alt.layer()
 
-    opened_list = [(pos.entry_dt, pos.id, pos.entry_price, pos.volume) for pos in positions]
-    df_opened = pl.from_records(opened_list, orient="row", schema=["dt", "id", "price", "volume"]).with_columns(pl.from_epoch("dt", time_unit="d"))
-    long_base = alt.Chart(df_opened).encode(alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45), tooltip=["dt", "id", "price", "volume"])
+    opened_list = [(pos.entry_dt, pos.id, pos.entry_price, pos.volume, pos.pnl) for pos in positions]
+    df_opened = pl.from_records(opened_list, orient="row", schema=["dt", "id", "price", "volume", "pnl"]).with_columns(pl.from_epoch("dt", time_unit="d"))
+    long_base = alt.Chart(df_opened).encode(alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45), tooltip=["dt", "id", "price", "volume", "pnl"])
     long_markers = long_base.mark_point(shape="triangle-up", color="blue", yOffset=20).encode(y="price")
     long_texts = long_base.mark_text(align="center", baseline="top", yOffset=35, color="blue").encode(y="price", text="id")
     layers = long_markers + long_texts
 
-    closed_list = [(pos.exit_dt, pos.id, pos.exit_price, pos.volume, pos.pnl, pos.fees) for pos in positions if pos.pnl is not None]
+    closed_list = [(pos.exit_dt, pos.id, pos.exit_price, pos.volume, pos.pnl, pos.fees) for pos in positions if pos.exit_dt is not None]
     if len(closed_list) > 0:
         df_closed = pl.from_records(closed_list, orient="row", schema=["dt", "id", "price", "volume", "pnl", "fees"]).with_columns(pl.from_epoch("dt", time_unit="d"))
         short_base = (
