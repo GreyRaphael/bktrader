@@ -5,6 +5,24 @@ import duckdb
 from bktrader import datatype
 
 
+def predicted_close_ratio(update_time: dt.datetime):
+    morning_start = dt.datetime.combine(update_time.date(), dt.time(9, 30, 0))
+    morning_end = dt.datetime.combine(update_time.date(), dt.time(11, 30, 0))
+    afternoon_start = dt.datetime.combine(update_time.date(), dt.time(13, 0, 0))
+    afternoon_end = dt.datetime.combine(update_time.date(), dt.time(15, 0, 0))
+    if update_time < morning_start:
+        time_ratio = 0.0
+    elif update_time <= morning_end:
+        time_ratio = (update_time - morning_start) / dt.timedelta(hours=4)
+    elif update_time < afternoon_start:
+        time_ratio = 0.5
+    elif update_time <= afternoon_end:
+        time_ratio = (update_time - afternoon_start + dt.timedelta(hours=2)) / dt.timedelta(hours=4)
+    else:
+        time_ratio = 1.0
+    return time_ratio
+
+
 class EastQuote:
     def __init__(self, uri: str):
         self.uri = uri
@@ -118,7 +136,7 @@ class EastQuote:
 
 class XueQiuQuote:
     """
-    get quote of single securities
+    get quote of single code
     source: https://xueqiu.com/S/SH600000
     """
 
@@ -131,40 +149,24 @@ class XueQiuQuote:
             }
         )
 
-    def predict_closed_value(self, update_time: dt.datetime, val: float):
-        morning_start = dt.datetime.combine(update_time.date(), dt.time(9, 30, 0))
-        morning_end = dt.datetime.combine(update_time.date(), dt.time(11, 30, 0))
-        afternoon_start = dt.datetime.combine(update_time.date(), dt.time(13, 0, 0))
-        afternoon_end = dt.datetime.combine(update_time.date(), dt.time(15, 0, 0))
-        if update_time < morning_start:
-            return 0.0
-        elif update_time <= morning_end:
-            time_ratio = (update_time - morning_start) / dt.timedelta(hours=4)
-        elif update_time < afternoon_start:
-            time_ratio = 0.5
-        elif update_time <= afternoon_end:
-            time_ratio = (update_time - afternoon_start + dt.timedelta(hours=2)) / dt.timedelta(hours=4)
-        else:
-            time_ratio = 1.0
-        return val / time_ratio
-
     def get_quote(self, code: int) -> datatype.Bar:
         with duckdb.connect(self.uri, read_only=True) as conn:
             query = "SELECT ROUND(close/1e4, 3), adjfactor FROM etf WHERE code=? ORDER BY dt DESC LIMIT 1"
-            last_close, factor = conn.execute(query, [code]).fetchone()
+            duck_last_close, factor = conn.execute(query, [code]).fetchone()
 
         url_params = {
             "symbol": f"SH{code}" if code > 500000 else f"SZ{code}",
             "extend": "detail",
         }
         url = "https://stock.xueqiu.com/v5/stock/quote.json"
-        quote = self.client.get(url, params=url_params, timeout=3).json()["data"]["quote"]
+        quote = self.client.get(url, params=url_params, timeout=5).json()["data"]["quote"]
         # iopv = quote["iopv"]
         # netvalue = quote["unit_nav"]
         update_dt = dt.datetime.fromtimestamp(quote["time"] / 1000)
+        time_ratio = predicted_close_ratio(update_dt)
         preclose = quote["last_close"]
-        adjfactor = factor if math.isclose(last_close, preclose) else last_close / preclose * factor
-        print("adjfactor", adjfactor)
+        adjfactor = factor if math.isclose(duck_last_close, preclose) else duck_last_close / preclose * factor
+        # print("adjfactor", adjfactor)
         return datatype.Bar(
             code=int(quote["code"]),
             dt=(update_dt.date() - dt.date(1970, 1, 1)).days,
@@ -173,8 +175,8 @@ class XueQiuQuote:
             high=round(quote["high"] * adjfactor, 3),
             low=round(quote["low"] * adjfactor, 3),
             close=round(quote["current"] * adjfactor, 3),
-            volume=self.predict_closed_value(update_dt, quote["volume"]),
-            amount=round(self.predict_closed_value(update_dt, quote["amount"]) * adjfactor, 3),
+            volume=quote["volume"] / time_ratio,
+            amount=round(quote["amount"] / time_ratio * adjfactor, 3),
         )
 
 
