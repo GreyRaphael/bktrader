@@ -116,8 +116,74 @@ class EastQuote:
         )
 
 
+class XueQiuQuote:
+    """
+    get quote of single securities
+    source: https://xueqiu.com/S/SH600000
+    """
+
+    def __init__(self, uri: str):
+        self.uri = uri
+        self.client = httpx.Client(
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0",
+                "Cookie": "xq_a_token=220b0abef0fac476d076c9f7a3938b7edac35f48;",
+            }
+        )
+
+    def predict_closed_value(self, update_time: dt.datetime, val: float):
+        morning_start = dt.datetime.combine(update_time.date(), dt.time(9, 30, 0))
+        morning_end = dt.datetime.combine(update_time.date(), dt.time(11, 30, 0))
+        afternoon_start = dt.datetime.combine(update_time.date(), dt.time(13, 0, 0))
+        afternoon_end = dt.datetime.combine(update_time.date(), dt.time(15, 0, 0))
+        if update_time < morning_start:
+            return 0.0
+        elif update_time <= morning_end:
+            time_ratio = (update_time - morning_start) / dt.timedelta(hours=4)
+        elif update_time < afternoon_start:
+            time_ratio = 0.5
+        elif update_time <= afternoon_end:
+            time_ratio = (update_time - afternoon_start + dt.timedelta(hours=2)) / dt.timedelta(hours=4)
+        else:
+            time_ratio = 1.0
+        return val / time_ratio
+
+    def get_quote(self, code: int) -> datatype.Bar:
+        with duckdb.connect(self.uri, read_only=True) as conn:
+            query = "SELECT ROUND(close/1e4, 3), adjfactor FROM etf WHERE code=? ORDER BY dt DESC LIMIT 1"
+            last_close, factor = conn.execute(query, [code]).fetchone()
+
+        url_params = {
+            "symbol": f"SH{code}" if code > 500000 else f"SZ{code}",
+            "extend": "detail",
+        }
+        url = "https://stock.xueqiu.com/v5/stock/quote.json"
+        quote = self.client.get(url, params=url_params, timeout=3).json()["data"]["quote"]
+        # iopv = quote["iopv"]
+        # netvalue = quote["unit_nav"]
+        update_dt = dt.datetime.fromtimestamp(quote["time"] / 1000)
+        preclose = quote["last_close"]
+        adjfactor = factor if math.isclose(last_close, preclose) else last_close / preclose * factor
+        print("adjfactor", adjfactor)
+        return datatype.Bar(
+            code=int(quote["code"]),
+            dt=(update_dt.date() - dt.date(1970, 1, 1)).days,
+            preclose=round(preclose * adjfactor, 3),
+            open=round(quote["open"] * adjfactor, 3),
+            high=round(quote["high"] * adjfactor, 3),
+            low=round(quote["low"] * adjfactor, 3),
+            close=round(quote["current"] * adjfactor, 3),
+            volume=self.predict_closed_value(update_dt, quote["volume"]),
+            amount=round(self.predict_closed_value(update_dt, quote["amount"]) * adjfactor, 3),
+        )
+
+
 if __name__ == "__main__":
-    east_bar = EastQuote(uri="bar1d.db")
-    east_bar.update()
-    print(east_bar.get_quote(513650))
-    print(east_bar.get_quote(159659))
+    # east_bar = EastQuote(uri="bar1d.db")
+    # east_bar.update()
+    # print(east_bar.get_quote(513650))
+    # print(east_bar.get_quote(159659))
+
+    xueqiu_bar = XueQiuQuote(uri="bar1d.db")
+    bar = xueqiu_bar.get_quote(513650)
+    print(bar)
