@@ -5,18 +5,19 @@ import duckdb
 from engine import BacktestEngine, TradeEngine
 
 
-def calc_ls_chart(positions: list):
+# long-short markers and texts
+def draw_ls_chart(positions: list):
     if not positions:  # empty positions
         return alt.layer()
 
-    opened_list = [(pos.entry_dt, pos.id, pos.entry_price, pos.volume) for pos in positions]
-    df_opened = pl.from_records(opened_list, orient="row", schema=["dt", "id", "price", "volume"]).with_columns(pl.from_epoch("dt", time_unit="d"))
-    long_base = alt.Chart(df_opened).encode(alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45), tooltip=["dt", "id", "price", "volume"])
+    opened_list = [(pos.entry_dt, pos.id, pos.entry_price, pos.volume, pos.pnl) for pos in positions]
+    df_opened = pl.from_records(opened_list, orient="row", schema=["dt", "id", "price", "volume", "pnl"]).with_columns(pl.from_epoch("dt", time_unit="d"))
+    long_base = alt.Chart(df_opened).encode(alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45), tooltip=["dt", "id", "price", "volume", "pnl"])
     long_markers = long_base.mark_point(shape="triangle-up", color="blue", yOffset=20).encode(y="price")
     long_texts = long_base.mark_text(align="center", baseline="top", yOffset=35, color="blue").encode(y="price", text="id")
     layers = long_markers + long_texts
 
-    closed_list = [(pos.exit_dt, pos.id, pos.exit_price, pos.volume, pos.pnl, pos.fees) for pos in positions if pos.pnl is not None]
+    closed_list = [(pos.exit_dt, pos.id, pos.exit_price, pos.volume, pos.pnl, pos.fees) for pos in positions if pos.exit_dt is not None]
     if len(closed_list) > 0:
         df_closed = pl.from_records(closed_list, orient="row", schema=["dt", "id", "price", "volume", "pnl", "fees"]).with_columns(pl.from_epoch("dt", time_unit="d"))
         short_base = (
@@ -36,23 +37,7 @@ def calc_ls_chart(positions: list):
     return layers
 
 
-def calc_candle_chart(uri: str, code: int, start: dt.date, end: dt.date):
-    query = """
-    SELECT
-        dt,
-        ROUND(open * adjfactor / 1e4, 3) AS adj_open,
-        ROUND(high * adjfactor / 1e4, 3) AS adj_high,
-        ROUND(low * adjfactor / 1e4, 3) AS adj_low,
-        ROUND(close * adjfactor / 1e4, 3) AS adj_close,
-    FROM
-        etf
-    WHERE 
-        code = ? AND dt BETWEEN ? AND ?
-    """
-
-    with duckdb.connect(uri) as conn:
-        df = conn.execute(query, [code, start, end]).pl()
-
+def draw_candle_chart(df: pl.DataFrame):
     open_close_color = alt.condition("datum.adj_close>datum.adj_open", alt.value("red"), alt.value("green"))
     base = alt.Chart(df).encode(
         alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
@@ -71,7 +56,7 @@ def calc_candle_chart(uri: str, code: int, start: dt.date, end: dt.date):
     return rule + bar
 
 
-def calc_realtime_candle_chart(uri: str, code: int, start: dt.date, last_quote):
+def draw_history_candles(code: int, start: dt.date, end: dt.date, uri: str = "bar1d.db"):
     query = """
     SELECT
         dt,
@@ -85,7 +70,25 @@ def calc_realtime_candle_chart(uri: str, code: int, start: dt.date, last_quote):
         code = ? AND dt BETWEEN ? AND ?
     """
     with duckdb.connect(uri) as conn:
-        df = conn.execute(query, [code, start, dt.date.today()]).pl()
+        df = conn.execute(query, [code, start, end]).pl()
+    return draw_candle_chart(df)
+
+
+def draw_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "bar1d.db"):
+    query = """
+    SELECT
+        dt,
+        ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+        ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+        ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+        ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+    FROM
+        etf
+    WHERE 
+        code = ? AND dt BETWEEN ? AND ?
+    """
+    with duckdb.connect(uri) as conn:
+        df_history = conn.execute(query, [code, start, dt.date.today()]).pl()
 
     df_today = pl.DataFrame(
         {
@@ -96,27 +99,11 @@ def calc_realtime_candle_chart(uri: str, code: int, start: dt.date, last_quote):
             "adj_close": last_quote.close,
         }
     ).with_columns(pl.from_epoch("dt", time_unit="d"))
-    df_combined = pl.concat([df, df_today])
-
-    open_close_color = alt.condition("datum.adj_close>datum.adj_open", alt.value("red"), alt.value("green"))
-    base = alt.Chart(df_combined).encode(
-        alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
-        color=open_close_color,
-        tooltip=["dt", "adj_open", "adj_high", "adj_low", "adj_close"],
-    )
-    rule = base.mark_rule().encode(alt.Y("adj_low").title("Price"), alt.Y2("adj_high"))
-    bar = base.mark_bar(
-        fillOpacity=0,  # Make the bar hollow
-        strokeWidth=1.5,  # Define the stroke width
-    ).encode(
-        y="adj_open",
-        y2="adj_close",
-        stroke=open_close_color,
-    )
-    return rule + bar
+    df_combined = pl.concat([df_history, df_today])
+    return draw_candle_chart(df_combined)
 
 
-def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, chart_width: int = 1600):
+def backtest_chart(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
     replayer = DuckdbReplayer(start, end, code, uri)
@@ -126,12 +113,12 @@ def backtest_chart(uri: str, code: int, start: dt.date, end: dt.date, strategy, 
     time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
     print(f"Backtest costs {time_elapsed} seconds")
 
-    chart_ls = calc_ls_chart(strategy.broker.positions)
-    chart_candle = calc_candle_chart(uri, code, start, end)
+    chart_ls = draw_ls_chart(strategy.broker.positions)
+    chart_candle = draw_history_candles(code, start, end, uri)
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
-def realtime_chart(uri: str, code: int, start: dt.date, last_quote, strategy, chart_width: int = 1600):
+def realtime_chart(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
     end = dt.date.today()
@@ -142,25 +129,15 @@ def realtime_chart(uri: str, code: int, start: dt.date, last_quote, strategy, ch
     time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
     print(f"realtime costs {time_elapsed} seconds")
 
-    chart_ls = calc_ls_chart(strategy.broker.positions)
-    chart_candle = calc_realtime_candle_chart(uri, code, start, last_quote)
-
+    chart_ls = draw_ls_chart(strategy.broker.positions)
+    chart_candle = draw_realtime_candles(code, start, last_quote, uri)
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
-if __name__ == "__main__":
-    import argparse
+def history(args):
     from bktrader import strategy
 
-    parser = argparse.ArgumentParser(description="check one etf")
-    parser.add_argument("-c", type=int, required=True, dest="code", help="etf integer code")
-    args = parser.parse_args()
-
     alt.renderers.enable("browser")
-
-    uri = "bar1d.db"
-    end = dt.date.today()
-    start = dt.date(end.year, 1, 1)
     stg = strategy.GridCCI(
         init_cash=1e5,
         cum_quantile=0.3,
@@ -172,19 +149,62 @@ if __name__ == "__main__":
         # profit_limit=0.08,
     )
 
-    chart = backtest_chart(uri, args.code, start, end, stg, chart_width=1600)
-
-    print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
-    print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
-
-    annual_return, annual_volatility, sharpe_ratio = stg.broker.analyzer.sharpe_ratio(0.015)
-    print(f"sharpe annual_return: {annual_return:.3f}")
-    print(f"sharpe annual_volatility: {annual_volatility:.3f}")
-    print(f"sharpe sharpe_ratio: {sharpe_ratio:.3f}")
-
-    annual_return, annual_downside_deviation, sortino_ratio = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-    print(f"sortino annual_return: {annual_return:.3f}")
-    print(f"sortino annual_downside_deviation: {annual_downside_deviation:.3f}")
-    print(f"sortino sortino_ratio: {sortino_ratio:.3f}")
-
+    chart = backtest_chart(args.code, args.start_dt, args.end_dt, stg, args.uri, chart_width=2000)
     chart.show()
+
+
+def realtime(args):
+    from bktrader import strategy
+    from quote.realtime import XueQiuQuote
+
+    alt.renderers.enable("browser")
+    stg = strategy.GridCCI(
+        init_cash=2e5,
+        cum_quantile=0.3,
+        rank_period=15,
+        rank_limit=0.3,
+        cci_threshold=0.0,
+        max_active_pos_len=50,
+        profit_limit=0.15,
+        # profit_limit=0.08,
+    )
+
+    quoter = XueQiuQuote(args.uri)
+    last_quote = quoter.get_quote(args.code)
+    chart = realtime_chart(args.code, args.start_dt, last_quote, stg, args.uri, chart_width=2000)
+    chart.show()
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="backtest 1 etf in history or realtime")
+    today_date = dt.date.today()
+    parser.add_argument("-sdt", dest="start_dt", type=lambda s: dt.datetime.strptime(s, "%Y%m%d").date(), default=dt.date(today_date.year, 1, 1), help="start date")
+    parser.add_argument("-c", dest="code", type=int, required=True, help="etf integer code")
+    parser.add_argument("-uri", type=str, default="bar1d.db", help="duckdb uri")
+
+    subparsers = parser.add_subparsers(description='choose from ["history", "realtime"]', required=True)
+
+    backtester = subparsers.add_parser("history", help="backtest 1 etf in history")
+    backtester.set_defaults(func=history)
+    backtester.add_argument("-edt", dest="end_dt", type=lambda s: dt.datetime.strptime(s, "%Y%m%d").date(), default=today_date, help="end date")
+
+    trader = subparsers.add_parser("realtime", help="backtest 1 etf in realtime")
+    trader.set_defaults(func=realtime)
+
+    args = parser.parse_args()
+    args.func(args)
+
+    # print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
+    # print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
+
+    # annual_return, annual_volatility, sharpe_ratio = stg.broker.analyzer.sharpe_ratio(0.015)
+    # print(f"sharpe annual_return: {annual_return:.3f}")
+    # print(f"sharpe annual_volatility: {annual_volatility:.3f}")
+    # print(f"sharpe sharpe_ratio: {sharpe_ratio:.3f}")
+
+    # annual_return, annual_downside_deviation, sortino_ratio = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+    # print(f"sortino annual_return: {annual_return:.3f}")
+    # print(f"sortino annual_downside_deviation: {annual_downside_deviation:.3f}")
+    # print(f"sortino sortino_ratio: {sortino_ratio:.3f}")
