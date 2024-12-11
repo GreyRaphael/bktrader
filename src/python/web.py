@@ -56,8 +56,9 @@ async def history_backtest(
         profit_limit=0.15,
         # profit_limit=0.08,
     )
-    # chart = backtest_history(code, start, end, stg, "bar1d.db").to_json()
-    chart = backtest_history(code, start, end, stg, "bar1d.db").to_json()
+    quoter = XueQiuQuote("bar1d.db")
+    quoter.get_quote(code)
+    chart = backtest_history(code, start, end, stg, "bar1d.db").properties(title=f'{code} {quoter.quote["name"]}').to_json()
     return templates.TemplateResponse(request=request, name="index.html", context={"chart_json": chart, "usrname": username})
 
 
@@ -117,7 +118,7 @@ async def bench_history(
         ]
         data.append(row)
 
-    bench_json = json.dumps(data) # can handle nan automatically
+    bench_json = json.dumps(data)  # can handle nan automatically
     return templates.TemplateResponse(request=request, name="bench.html", context={"usrname": username, "bench_json": bench_json})
 
 

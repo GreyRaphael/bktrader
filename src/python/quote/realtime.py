@@ -174,6 +174,7 @@ class XueQiuQuote:
                 "Cookie": "xq_a_token=220b0abef0fac476d076c9f7a3938b7edac35f48;",
             }
         )
+        self.quote = {}
 
     def get_quote(self, code: int) -> datatype.Bar:
         with duckdb.connect(self.uri, read_only=True) as conn:
@@ -186,6 +187,7 @@ class XueQiuQuote:
         }
         url = "https://stock.xueqiu.com/v5/stock/quote.json"
         quote = self.client.get(url, params=url_params, timeout=5).json()["data"]["quote"]
+        self.quote = quote
         # iopv = quote["iopv"]
         # netvalue = quote["unit_nav"]
         update_dt = dt.datetime.fromtimestamp(quote["time"] / 1000)
