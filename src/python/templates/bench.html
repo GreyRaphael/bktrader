@@ -34,7 +34,15 @@
         new DataTable('#historyTable', {
             paging: false,
             columns: [
-                { title: 'code' },
+                {
+                    title: 'code',
+                    // The first column, index 0
+                    data: 0, // Refers to the first element in each sublist
+                    render: function (data, type, row, meta) {
+                        // Create a clickable link that opens in a new tab
+                        return `<a href="/history/${encodeURIComponent(data)}" target="_blank">${data}</a>`;
+                    }
+                },
                 { title: 'portfolio_profit' },
                 { title: 'max_drawdown' },
                 { title: 'sharpe_annual.' },
