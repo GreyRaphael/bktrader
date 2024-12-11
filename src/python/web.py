@@ -1,5 +1,6 @@
 import os
 import datetime as dt
+import json
 
 from dotenv import load_dotenv
 import secrets
@@ -101,22 +102,22 @@ async def bench_history(
 
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-        row = {
-            "code": code,
-            "portfolio_profit": round(stg.broker.profit_net(), 3),
-            # "securities_profit": round(stg.broker.profit_position(),3),
-            "max_drawdown": round(stg.broker.analyzer.max_drawdown(), 3),
-            "sharpe_annual": round(sharpe_annual, 3),
-            "sharpe_volatility": round(sharpe_volatility, 3),
-            "sharpe_ratio": round(sharpe_ratio, 3),
-            "sortino_annual": round(sortino_annual, 3),
-            "sortino_volatility": round(sortino_volatility, 3),
-            "sortino_ratio": round(sortino_ratio, 3),
-        }
+        row = [
+            code,
+            round(stg.broker.profit_net(), 3),
+            # round(stg.broker.profit_position(), 3),
+            round(stg.broker.analyzer.max_drawdown(), 3),
+            round(sharpe_annual, 3),
+            round(sharpe_volatility, 3),
+            round(sharpe_ratio, 3),
+            round(sortino_annual, 3),
+            round(sortino_volatility, 3),
+            round(sortino_ratio, 3),
+        ]
         data.append(row)
 
-    # print(data)
-    return data
+    bench_json = json.dumps(data)
+    return templates.TemplateResponse(request=request, name="bench.html", context={"usrname": username, "bench_json": bench_json})
 
 
 @app.get("/realtime/{code}")
