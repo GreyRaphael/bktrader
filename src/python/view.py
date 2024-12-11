@@ -103,7 +103,7 @@ def draw_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "bar
     return draw_candle_chart(df_combined)
 
 
-def backtest_chart(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
+def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
     replayer = DuckdbReplayer(start, end, code, uri)
@@ -118,7 +118,7 @@ def backtest_chart(code: int, start: dt.date, end: dt.date, strategy, uri: str =
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
-def realtime_chart(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
+def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
     from quote.history import DuckdbReplayer
 
     end = dt.date.today()
@@ -134,32 +134,7 @@ def realtime_chart(code: int, start: dt.date, last_quote, strategy, uri: str = "
     return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
-if __name__ == "__main__":
-    import argparse
-    from bktrader import strategy
-
-    parser = argparse.ArgumentParser(description="check one etf")
-    parser.add_argument("-c", type=int, required=True, dest="code", help="etf integer code")
-    args = parser.parse_args()
-
-    alt.renderers.enable("browser")
-
-    uri = "bar1d.db"
-    end = dt.date.today()
-    start = dt.date(end.year, 1, 1)
-    stg = strategy.GridCCI(
-        init_cash=1e5,
-        cum_quantile=0.3,
-        rank_period=15,
-        rank_limit=0.3,
-        cci_threshold=0.0,
-        max_active_pos_len=25,
-        profit_limit=0.15,
-        # profit_limit=0.08,
-    )
-
-    chart = backtest_chart(uri, args.code, start, end, stg, chart_width=1600)
-
+def benchmark_strategy(stg):
     print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
     print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
 
@@ -173,4 +148,67 @@ if __name__ == "__main__":
     print(f"sortino annual_downside_deviation: {annual_downside_deviation:.3f}")
     print(f"sortino sortino_ratio: {sortino_ratio:.3f}")
 
+
+def history(args):
+    from bktrader import strategy
+
+    alt.renderers.enable("browser")
+    stg = strategy.GridCCI(
+        init_cash=1e5,
+        cum_quantile=0.3,
+        rank_period=15,
+        rank_limit=0.3,
+        cci_threshold=0.0,
+        max_active_pos_len=25,
+        profit_limit=0.15,
+        # profit_limit=0.08,
+    )
+
+    chart = backtest_history(args.code, args.start_dt, args.end_dt, stg, args.uri, chart_width=2000)
+    benchmark_strategy(stg)
     chart.show()
+
+
+def realtime(args):
+    from bktrader import strategy
+    from quote.realtime import XueQiuQuote
+
+    alt.renderers.enable("browser")
+    stg = strategy.GridCCI(
+        init_cash=2e5,
+        cum_quantile=0.3,
+        rank_period=15,
+        rank_limit=0.3,
+        cci_threshold=0.0,
+        max_active_pos_len=50,
+        profit_limit=0.15,
+        # profit_limit=0.08,
+    )
+
+    quoter = XueQiuQuote(args.uri)
+    last_quote = quoter.get_quote(args.code)
+    chart = backtest_realtime(args.code, args.start_dt, last_quote, stg, args.uri, chart_width=2000)
+    benchmark_strategy(stg)
+    chart.show()
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="backtest 1 etf in history or realtime")
+    today_date = dt.date.today()
+    parser.add_argument("-sdt", dest="start_dt", type=lambda s: dt.datetime.strptime(s, "%Y%m%d").date(), default=dt.date(today_date.year, 1, 1), help="start date")
+    parser.add_argument("-c", dest="code", type=int, required=True, help="etf integer code")
+    parser.add_argument("-uri", type=str, default="bar1d.db", help="duckdb uri")
+
+    subparsers = parser.add_subparsers(description='choose from ["history", "realtime"]', required=True)
+
+    backtester = subparsers.add_parser("history", help="backtest 1 etf in history")
+    backtester.set_defaults(func=history)
+    backtester.add_argument("-edt", dest="end_dt", type=lambda s: dt.datetime.strptime(s, "%Y%m%d").date(), default=today_date, help="end date")
+
+    trader = subparsers.add_parser("realtime", help="backtest 1 etf in realtime")
+    trader.set_defaults(func=realtime)
+
+    args = parser.parse_args()
+    args.func(args)
