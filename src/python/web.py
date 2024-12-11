@@ -116,7 +116,7 @@ async def bench_history(
         ]
         data.append(row)
 
-    bench_json = json.dumps(data)
+    bench_json = json.dumps(data) # can handle nan automatically
     return templates.TemplateResponse(request=request, name="bench.html", context={"usrname": username, "bench_json": bench_json})
 
 
