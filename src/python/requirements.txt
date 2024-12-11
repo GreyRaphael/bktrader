@@ -1,0 +1,8 @@
+altair==5.5.0
+bktrader
+duckdb==1.1.2
+fastapi==0.115.6
+httpx==0.28.0
+perpetual==0.7.10
+polars==1.16.0
+python-dotenv==1.0.1
