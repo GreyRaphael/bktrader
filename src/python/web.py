@@ -9,7 +9,8 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 
 from bktrader import strategy
-from view import backtest_history
+from view import backtest_history, backtest_realtime
+from quote.realtime import XueQiuQuote
 
 # Load environment variables from the .env file (if present)
 load_dotenv()
@@ -47,4 +48,24 @@ async def history_backtest(request: Request, code: int, username: Annotated[str,
         # profit_limit=0.08,
     )
     chart = backtest_history(code, dt.date(dt_today.year, 1, 1), dt_today, stg, "bar1d.db", chart_width=1800).to_json()
+    return templates.TemplateResponse(request=request, name="index.html", context={"chart_json": chart, "usrname": username})
+
+
+@app.get("/realtime/{code}")
+async def realtime_backtest(request: Request, code: int, username: Annotated[str, Depends(get_current_username)]):
+    dt_today = dt.date.today()
+    stg = strategy.GridCCI(
+        init_cash=2e5,
+        cum_quantile=0.3,
+        rank_period=15,
+        rank_limit=0.3,
+        cci_threshold=0.0,
+        max_active_pos_len=50,
+        profit_limit=0.15,
+        # profit_limit=0.08,
+    )
+    uri = "bar1d.db"
+    quoter = XueQiuQuote(uri)
+    last_quote = quoter.get_quote(code)
+    chart = backtest_realtime(code, dt.date(dt_today.year, 1, 1), last_quote, stg, uri, chart_width=1800).to_json()
     return templates.TemplateResponse(request=request, name="index.html", context={"chart_json": chart, "usrname": username})
