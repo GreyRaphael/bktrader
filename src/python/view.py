@@ -103,7 +103,7 @@ def draw_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "bar
     return draw_candle_chart(df_combined)
 
 
-def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
+def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db"):
     from quote.history import DuckdbReplayer
 
     replayer = DuckdbReplayer(start, end, code, uri)
@@ -115,10 +115,10 @@ def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str
 
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_history_candles(code, start, end, uri)
-    return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
+    return (chart_candle + chart_ls).properties(width="container", title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
-def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", chart_width: int = 1600):
+def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db"):
     from quote.history import DuckdbReplayer
 
     end = dt.date.today()
@@ -131,7 +131,7 @@ def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str 
 
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_realtime_candles(code, start, last_quote, uri)
-    return (chart_candle + chart_ls).properties(width=chart_width, title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
+    return (chart_candle + chart_ls).properties(width="container", title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
 
 
 def benchmark_strategy(stg):
@@ -164,7 +164,7 @@ def history(args):
         # profit_limit=0.08,
     )
 
-    chart = backtest_history(args.code, args.start_dt, args.end_dt, stg, args.uri, chart_width=1800)
+    chart = backtest_history(args.code, args.start_dt, args.end_dt, stg, args.uri)
     benchmark_strategy(stg)
     chart.show()
 
@@ -187,7 +187,7 @@ def realtime(args):
 
     quoter = XueQiuQuote(args.uri)
     last_quote = quoter.get_quote(args.code)
-    chart = backtest_realtime(args.code, args.start_dt, last_quote, stg, args.uri, chart_width=1800)
+    chart = backtest_realtime(args.code, args.start_dt, last_quote, stg, args.uri)
     benchmark_strategy(stg)
     chart.show()
 

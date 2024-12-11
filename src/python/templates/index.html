@@ -11,7 +11,7 @@
 
 <body>
   <h3>{{usrname}}</h3>
-  <div id="vis"></div>
+  <div id="vis" style="width: 100%"></div>
   <script>
     const spec = {{ chart_json | safe }};
     vegaEmbed('#vis', spec).catch(console.error);

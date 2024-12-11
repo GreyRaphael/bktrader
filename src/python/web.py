@@ -56,7 +56,8 @@ async def history_backtest(
         profit_limit=0.15,
         # profit_limit=0.08,
     )
-    chart = backtest_history(code, start, end, stg, "bar1d.db", chart_width=1800).to_json()
+    # chart = backtest_history(code, start, end, stg, "bar1d.db").to_json()
+    chart = backtest_history(code, start, end, stg, "bar1d.db").to_json()
     return templates.TemplateResponse(request=request, name="index.html", context={"chart_json": chart, "usrname": username})
 
 
@@ -141,5 +142,5 @@ async def realtime_backtest(
     quoter = XueQiuQuote(uri)
     last_quote = quoter.get_quote(code)
     print(last_quote)
-    chart = backtest_realtime(code, start, last_quote, stg, uri, chart_width=1800).to_json()
+    chart = backtest_realtime(code, start, last_quote, stg, uri).to_json()
     return templates.TemplateResponse(request=request, name="index.html", context={"chart_json": chart, "usrname": username})
