@@ -164,7 +164,7 @@ def history(args):
         # profit_limit=0.08,
     )
 
-    chart = backtest_history(args.code, args.start_dt, args.end_dt, stg, args.uri, chart_width=2000)
+    chart = backtest_history(args.code, args.start_dt, args.end_dt, stg, args.uri, chart_width=1800)
     benchmark_strategy(stg)
     chart.show()
 
@@ -187,7 +187,7 @@ def realtime(args):
 
     quoter = XueQiuQuote(args.uri)
     last_quote = quoter.get_quote(args.code)
-    chart = backtest_realtime(args.code, args.start_dt, last_quote, stg, args.uri, chart_width=2000)
+    chart = backtest_realtime(args.code, args.start_dt, last_quote, stg, args.uri, chart_width=1800)
     benchmark_strategy(stg)
     chart.show()
 
