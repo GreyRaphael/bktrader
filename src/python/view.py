@@ -38,12 +38,21 @@ def draw_ls_chart(positions: list):
 
 
 def draw_candle_chart(df: pl.DataFrame):
+    # Add a vertical rule when hover
+    hover = alt.selection_point(fields=["dt"], nearest=True, on="mouseover")
+    vertical_rule = alt.Chart(df).mark_rule(color="gray", strokeDash=[5, 5]).encode(x="dt").transform_filter(hover)
+
     open_close_color = alt.condition("datum.adj_close>datum.adj_open", alt.value("red"), alt.value("green"))
-    base = alt.Chart(df).encode(
-        alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
-        color=open_close_color,
-        tooltip=["dt", "adj_open", "adj_high", "adj_low", "adj_close"],
+    base = (
+        alt.Chart(df)
+        .encode(
+            alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
+            color=open_close_color,
+            tooltip=["dt", "adj_open", "adj_high", "adj_low", "adj_close"],
+        )
+        .add_params(hover)
     )
+
     rule = base.mark_rule().encode(alt.Y("adj_low").title("Price"), alt.Y2("adj_high"))
     bar = base.mark_bar(
         fillOpacity=0,  # Make the bar hollow
@@ -53,7 +62,7 @@ def draw_candle_chart(df: pl.DataFrame):
         y2="adj_close",
         stroke=open_close_color,
     )
-    return rule + bar
+    return rule + bar + vertical_rule
 
 
 def draw_history_candles(code: int, start: dt.date, end: dt.date, uri: str = "bar1d.db"):
