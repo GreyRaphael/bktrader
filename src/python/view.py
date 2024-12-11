@@ -46,7 +46,7 @@ def draw_candle_chart(df: pl.DataFrame):
     base = (
         alt.Chart(df)
         .encode(
-            alt.X("dt:T").axis(format="%Y-%m-%d", labelAngle=-45),
+            alt.X("dt:T", scale=alt.Scale(padding=25)).axis(format="%Y-%m-%d", labelAngle=-45),
             color=open_close_color,
             tooltip=["dt", "adj_open", "adj_high", "adj_low", "adj_close"],
         )
@@ -73,6 +73,7 @@ def draw_history_candles(code: int, start: dt.date, end: dt.date, uri: str = "ba
         ROUND(high * adjfactor / 1e4, 3) AS adj_high,
         ROUND(low * adjfactor / 1e4, 3) AS adj_low,
         ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+        volume,
     FROM
         etf
     WHERE 
@@ -121,7 +122,7 @@ def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str
 
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_history_candles(code, start, end, uri)
-    return (chart_candle + chart_ls).properties(width="container", title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
+    return (chart_candle + chart_ls).properties(width="container", height=700, title=str(code)).configure_scale(zero=False).interactive()
 
 
 def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db"):
@@ -134,7 +135,7 @@ def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str 
 
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_realtime_candles(code, start, last_quote, uri)
-    return (chart_candle + chart_ls).properties(width="container", title=str(code)).configure_scale(zero=False, continuousPadding=50).interactive()
+    return (chart_candle + chart_ls).properties(width="container", height=700, title=str(code)).configure_scale(zero=False).interactive()
 
 
 def benchmark_strategy(stg):
