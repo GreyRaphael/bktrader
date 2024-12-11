@@ -32,6 +32,7 @@
     <script>
         const dataSet = {{ bench_json | safe }};
         new DataTable('#historyTable', {
+            paging: false,
             columns: [
                 { title: 'code' },
                 { title: 'portfolio_profit' },
