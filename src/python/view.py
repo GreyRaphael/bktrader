@@ -122,7 +122,7 @@ def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str
 
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_history_candles(code, start, end, uri)
-    return (chart_candle + chart_ls).properties(width="container", height=700, title=str(code)).configure_scale(zero=False).interactive()
+    return (chart_candle + chart_ls).properties(width="container", height=700).configure_scale(zero=False).interactive()
 
 
 def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db"):
@@ -135,84 +135,4 @@ def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str 
 
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_realtime_candles(code, start, last_quote, uri)
-    return (chart_candle + chart_ls).properties(width="container", height=700, title=str(code)).configure_scale(zero=False).interactive()
-
-
-def benchmark_strategy(stg):
-    print(f"profit_net: {stg.broker.profit_net():.3f}, profit_gross:{stg.broker.profit_gross():.3f}")
-    print(f"max_drawdown: {stg.broker.analyzer.max_drawdown():.3f}")
-
-    annual_return, annual_volatility, sharpe_ratio = stg.broker.analyzer.sharpe_ratio(0.015)
-    print(f"sharpe annual_return: {annual_return:.3f}")
-    print(f"sharpe annual_volatility: {annual_volatility:.3f}")
-    print(f"sharpe sharpe_ratio: {sharpe_ratio:.3f}")
-
-    annual_return, annual_downside_deviation, sortino_ratio = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-    print(f"sortino annual_return: {annual_return:.3f}")
-    print(f"sortino annual_downside_deviation: {annual_downside_deviation:.3f}")
-    print(f"sortino sortino_ratio: {sortino_ratio:.3f}")
-
-
-def history(args):
-    from bktrader import strategy
-
-    alt.renderers.enable("browser")
-    stg = strategy.GridCCI(
-        init_cash=1e5,
-        cum_quantile=0.3,
-        rank_period=15,
-        rank_limit=0.3,
-        cci_threshold=0.0,
-        max_active_pos_len=25,
-        profit_limit=0.15,
-        # profit_limit=0.08,
-    )
-
-    chart = backtest_history(args.code, args.start_dt, args.end_dt, stg, args.uri)
-    benchmark_strategy(stg)
-    chart.show()
-
-
-def realtime(args):
-    from bktrader import strategy
-    from quote.realtime import XueQiuQuote
-
-    alt.renderers.enable("browser")
-    stg = strategy.GridCCI(
-        init_cash=2e5,
-        cum_quantile=0.3,
-        rank_period=15,
-        rank_limit=0.3,
-        cci_threshold=0.0,
-        max_active_pos_len=50,
-        profit_limit=0.15,
-        # profit_limit=0.08,
-    )
-
-    quoter = XueQiuQuote(args.uri)
-    last_quote = quoter.get_quote(args.code)
-    chart = backtest_realtime(args.code, args.start_dt, last_quote, stg, args.uri)
-    benchmark_strategy(stg)
-    chart.show()
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="backtest 1 etf in history or realtime")
-    today_date = dt.date.today()
-    parser.add_argument("-sdt", dest="start_dt", type=lambda s: dt.datetime.strptime(s, "%Y%m%d").date(), default=dt.date(today_date.year, 1, 1), help="start date")
-    parser.add_argument("-c", dest="code", type=int, required=True, help="etf integer code")
-    parser.add_argument("-uri", type=str, default="bar1d.db", help="duckdb uri")
-
-    subparsers = parser.add_subparsers(description='choose from ["history", "realtime"]', required=True)
-
-    backtester = subparsers.add_parser("history", help="backtest 1 etf in history")
-    backtester.set_defaults(func=history)
-    backtester.add_argument("-edt", dest="end_dt", type=lambda s: dt.datetime.strptime(s, "%Y%m%d").date(), default=today_date, help="end date")
-
-    trader = subparsers.add_parser("realtime", help="backtest 1 etf in realtime")
-    trader.set_defaults(func=realtime)
-
-    args = parser.parse_args()
-    args.func(args)
+    return (chart_candle + chart_ls).properties(width="container", height=700).configure_scale(zero=False).interactive()
