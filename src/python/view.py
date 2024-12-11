@@ -108,10 +108,7 @@ def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str
 
     replayer = DuckdbReplayer(start, end, code, uri)
     engine = BacktestEngine(replayer, strategy)
-    dt_start = dt.datetime.now()
     engine.run()
-    time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
-    print(f"Backtest costs {time_elapsed} seconds")
 
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_history_candles(code, start, end, uri)
@@ -124,10 +121,7 @@ def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str 
     end = dt.date.today()
     replayer = DuckdbReplayer(start, end, code, uri)
     engine = TradeEngine(replayer, last_quote, strategy)
-    dt_start = dt.datetime.now()
     engine.run()
-    time_elapsed = (dt.datetime.now() - dt_start).total_seconds()
-    print(f"realtime costs {time_elapsed} seconds")
 
     chart_ls = draw_ls_chart(strategy.broker.positions)
     chart_candle = draw_realtime_candles(code, start, last_quote, uri)
