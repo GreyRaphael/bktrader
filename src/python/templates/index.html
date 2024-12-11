@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Altair with FastAPI</title>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+</head>
+
+<body>
+  <h3>Altair Chart with FastAPI</h3>
+  <div id="vis"></div>
+  <script>
+    const spec = {{ chart_json | safe }};
+    vegaEmbed('#vis', spec).catch(console.error);
+  </script>
+</body>
+
+</html>
