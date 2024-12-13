@@ -16,11 +16,11 @@ def draw_ls_chart(positions: list):
         )
         for pos in positions
     ]
-    long_scatter = (
+    entry_scatters = (
         Scatter()
         .add_xaxis([row[0] for row in opened_list])
         .add_yaxis(
-            "long",
+            "entry",
             [row[1:] for row in opened_list],
             symbol="arrow",
             color="blue",
@@ -31,10 +31,10 @@ def draw_ls_chart(positions: list):
                 formatter=JsCode("""
                     function (params) {
                         return 'entry_dt: ' + params.value[0] + '<br/>' +
-                            'entry_price: ' + params.value[1].toFixed(3) + '<br/>' +
+                            'entry_price: ' + params.value[1] + '<br/>' +
                             'id: ' + params.value[2] + '<br/>' +
                             'volume: ' + params.value[3] + '<br/>' +
-                            'pnl: ' + params.value[4].toFixed(3);
+                            'pnl: ' + params.value[4];
                     }
                     """)
             ),
@@ -42,6 +42,49 @@ def draw_ls_chart(positions: list):
             legend_opts=opts.LegendOpts(is_show=False),
         )
     )
+
+    closed_list = [
+        (
+            dt.date(1970, 1, 1) + dt.timedelta(days=pos.exit_dt),
+            round(pos.exit_price, 3),
+            pos.id,
+            pos.volume,
+            round(pos.pnl, 3),
+            round(pos.fees, 3),
+        )
+        for pos in positions if pos.exit_dt is not None
+    ]
+
+    exit_markers = (
+        Scatter()
+        .add_xaxis([row[0] for row in closed_list])
+        .add_yaxis(
+            "exit",
+            [row[1:] for row in closed_list],
+            symbol="arrow",
+            symbol_rotate=180,
+            color="brown",
+            label_opts=opts.LabelOpts(is_show=False),
+        )
+        .set_global_opts(
+            tooltip_opts=opts.TooltipOpts(
+                formatter=JsCode("""
+                    function (params) {
+                        return 'exit_dt: ' + params.value[0] + '<br/>' +
+                            'exit_price: ' + params.value[1] + '<br/>' +
+                            'id: ' + params.value[2] + '<br/>' +
+                            'volume: ' + params.value[3] + '<br/>' +
+                            'pnl: ' + params.value[4] + '<br/>' +
+                            'fees: ' + params.value[5];
+                    }
+                    """)
+            ),
+            yaxis_opts=opts.AxisOpts(is_scale=True),
+            legend_opts=opts.LegendOpts(is_show=False),
+        )
+    )
+
+    return (entry_scatters, exit_markers)
 
 
 def draw_candles(chart_data):
