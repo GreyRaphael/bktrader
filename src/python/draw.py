@@ -140,7 +140,7 @@ def draw_ls_markers(positions: list):
     entry_markpoints = [
         {
             "name": "entry_dt: {}<br/>entry_price: {}<br/>id: {}<br/>vol: {}<br/>pnl: {}".format(*item),  # for js render
-            "coord": (item[0], item[1]),
+            "coord": (item[0], item[1] * 0.98),
             "symbol": up_arrow_svg,
             "symbolSize": 10,
             "itemStyle": {"color": "blue"},
@@ -176,10 +176,10 @@ def draw_ls_markers(positions: list):
     exit_markpoints = [
         {
             "name": "exit_dt: {}<br/>exit_price: {}<br/>id: {}<br/>vol: {}<br/>pnl: {}<br/>fees:{}".format(*item),  # for js render
-            "coord": (item[0], item[1]),
+            "coord": (item[0], item[1] * 1.02),
             "symbolSize": 10,
             "symbol": down_arrow_svg,
-            "itemStyle": {"color": "brown"},
+            "itemStyle": {"color": "magenta"},
             "label": {
                 "show": True,
                 "position": "top",
@@ -242,13 +242,13 @@ def draw_candles(symbol: str, quotes: list[tuple], positions: list):
                 opts.DataZoomOpts(
                     type_="inside",
                     xaxis_index=[0, 1],  # kline and volume bars
-                    range_start=50,
+                    range_start=0,
                     range_end=100,
                 ),
                 opts.DataZoomOpts(
                     type_="slider",
                     xaxis_index=[0, 1],  # kline and volume bars
-                    range_start=50,
+                    range_start=0,
                     range_end=100,
                 ),
             ],
@@ -305,8 +305,8 @@ def draw_candles(symbol: str, quotes: list[tuple], positions: list):
         )
     )
 
-    entry_markers, exit_markers = draw_ls_chart(positions)
-    overlapped_kline = kline.overlap(entry_markers).overlap(exit_markers)
+    markers = draw_ls_markers(positions)
+    overlapped_kline = kline.overlap(markers)
 
     # kline + Bar
     grid_chart = Grid(init_opts=opts.InitOpts(width="100%", height="700px", theme="vintage"))
