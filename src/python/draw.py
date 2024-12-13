@@ -16,7 +16,7 @@ def draw_ls_chart(positions: list):
         )
         for pos in positions
     ]
-    entry_scatters = (
+    entry_markers = (
         Scatter()
         .add_xaxis([row[0] for row in opened_list])
         .add_yaxis(
@@ -52,7 +52,8 @@ def draw_ls_chart(positions: list):
             round(pos.pnl, 3),
             round(pos.fees, 3),
         )
-        for pos in positions if pos.exit_dt is not None
+        for pos in positions
+        if pos.exit_dt is not None
     ]
 
     exit_markers = (
@@ -84,7 +85,7 @@ def draw_ls_chart(positions: list):
         )
     )
 
-    return (entry_scatters, exit_markers)
+    return (entry_markers, exit_markers)
 
 
 def draw_candles(chart_data):
