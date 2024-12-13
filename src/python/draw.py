@@ -119,14 +119,19 @@ def draw_ls_chart(positions: list):
     return (entry_markers, exit_markers)
 
 
-def draw_candles(chart_data):
-    kline_data = [data[1:-1] for data in chart_data["values"]]
+def draw_candles(symbol:str, quotes: list[tuple]):
+    """tuple fields: date,open,close,low,high,volume"""
+    # preprocess quotes
+    dates = [row[0] for row in quotes]
+    oclh = [row[1:-1] for row in quotes]
+    vols = [(i, row[-1], -1 if row[1] > row[2] else 1) for i, row in enumerate(quotes)]
+
     kline = (
         Kline()
-        .add_xaxis(xaxis_data=chart_data["categoryData"])
+        .add_xaxis(xaxis_data=dates)
         .add_yaxis(
-            series_name="510050",
-            y_axis=kline_data,
+            symbol,
+            y_axis=oclh,
             itemstyle_opts=opts.ItemStyleOpts(
                 color="#ef232a",
                 color0="#14b143",
@@ -139,20 +144,20 @@ def draw_candles(chart_data):
             datazoom_opts=[
                 opts.DataZoomOpts(
                     type_="inside",
-                    xaxis_index=[0, 1],
+                    xaxis_index=[0, 1],  # kline and volume bars
                     range_start=95,
                     range_end=100,
                 ),
                 opts.DataZoomOpts(
                     type_="slider",
-                    xaxis_index=[0, 1],
+                    xaxis_index=[0, 1],  # kline and volume bars
                     range_start=95,
                     range_end=100,
                 ),
             ],
             visualmap_opts=opts.VisualMapOpts(
                 is_show=False,
-                series_index=1,
+                series_index=1,  # map to volume bars
                 is_piecewise=True,
                 pieces=[
                     {"value": 1, "color": "#ef232a"},
@@ -169,10 +174,10 @@ def draw_candles(chart_data):
 
     bar = (
         Bar()
-        .add_xaxis(xaxis_data=chart_data["categoryData"])
+        .add_xaxis(xaxis_data=dates)
         .add_yaxis(
             series_name="Volume",
-            y_axis=chart_data["volumes"],
+            y_axis=vols,
             label_opts=opts.LabelOpts(is_show=False),
         )
         .set_global_opts(
