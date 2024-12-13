@@ -17,8 +17,8 @@ def draw_ls_chart(positions: list):
         for pos in positions
     ]
     entry_markers = (
-        # Scatter(init_opts=opts.InitOpts(theme="vintage"))
-        Scatter()
+        Scatter(init_opts=opts.InitOpts(theme="vintage"))
+        # Scatter()
         .add_xaxis([row[0] for row in opened_list])
         .add_yaxis(
             "entry",
@@ -29,46 +29,61 @@ def draw_ls_chart(positions: list):
                 is_show=True,
                 position="bottom",
                 color="auto",
-                formatter=JsCode("""
-                    function (params) {
-                        return params.value[2];
-                    }
-                    """),
+                formatter="{@[2]}",
             ),
         )
         .set_global_opts(
             tooltip_opts=opts.TooltipOpts(
                 formatter=JsCode("""
-                    function (params) {
-                        return 'entry_dt: ' + params.value[0] + '<br/>' +
-                            'entry_price: ' + params.value[1] + '<br/>' +
-                            'id: ' + params.value[2] + '<br/>' +
-                            'volume: ' + params.value[3] + '<br/>' +
-                            'pnl: ' + params.value[4];
+                    function (args) {
+                        return `exit_dt: ${args.value[0]}<br/>exit_price: ${args.value[1]}<br/>id: ${args.value[2]}<br/>vol: ${args.value[3]}<br/>pnl: ${args.value[4]}`;
                     }
-                    """)
+                """)
             ),
             yaxis_opts=opts.AxisOpts(is_scale=True),
             legend_opts=opts.LegendOpts(is_show=False),
         )
     )
 
-    closed_list = [
-        (
-            dt.date(1970, 1, 1) + dt.timedelta(days=pos.exit_dt),
-            round(pos.exit_price, 3),
-            pos.id,
-            pos.volume,
-            round(pos.pnl, 3),
-            round(pos.fees, 3),
-        )
-        for pos in positions
-        if pos.exit_dt is not None
+    counts = defaultdict(int)
+    closed_list = []
+    # groupby (dt, price)
+    for pos in positions:
+        if pos.exit_dt is not None:
+            x = dt.date(1970, 1, 1) + dt.timedelta(days=pos.exit_dt)
+            y = round(pos.exit_price, 3)
+            closed_list.append(
+                (
+                    x,
+                    y,
+                    pos.id,
+                    pos.volume,
+                    round(pos.pnl, 3),
+                    round(pos.fees, 3),
+                    counts[(x, y)],
+                )
+            )
+            counts[(x, y)] += 1
+
+    markpoints = [
+        {
+            "name": "exit_dt: {}<br/>exit_price: {}<br/>id: {}<br/>vol: {}<br/>pnl: {}<br/>".format(*item),
+            "coord": (item[0], item[1]),
+            "symbolSize": 0,
+            "label": {
+                "show": True,
+                "position": "top",
+                "formatter": str(item[2]),
+                "color": "brown",
+                "fontSize": 12,
+                "distance": (item[6] + 1) * 20,
+            },
+        }
+        for item in closed_list
     ]
 
     exit_markers = (
-        # Scatter(init_opts=opts.InitOpts(theme="vintage"))
-        Scatter()
+        Scatter(init_opts=opts.InitOpts(theme="vintage"))
         .add_xaxis([row[0] for row in closed_list])
         .add_yaxis(
             "exit",
@@ -77,19 +92,23 @@ def draw_ls_chart(positions: list):
             symbol_rotate=180,
             color="brown",
             label_opts=opts.LabelOpts(is_show=False),
+            markpoint_opts=opts.MarkPointOpts(
+                data=markpoints,
+                label_opts=opts.LabelOpts(is_show=False),  # turn off global markpoint text
+            ),
         )
         .set_global_opts(
             tooltip_opts=opts.TooltipOpts(
+                trigger="item",
                 formatter=JsCode("""
                     function (params) {
-                        return 'exit_dt: ' + params.value[0] + '<br/>' +
-                            'exit_price: ' + params.value[1] + '<br/>' +
-                            'id: ' + params.value[2] + '<br/>' +
-                            'volume: ' + params.value[3] + '<br/>' +
-                            'pnl: ' + params.value[4] + '<br/>' +
-                            'fees: ' + params.value[5];
+                        if (params.componentType === 'markPoint') {
+                            return params.name;
+                        } else {
+                            return `exit_dt: ${params.value[0]}<br/>exit_price: ${params.value[1]}`;
+                        }
                     }
-                    """)
+                """),
             ),
             yaxis_opts=opts.AxisOpts(is_scale=True),
             legend_opts=opts.LegendOpts(is_show=False),
