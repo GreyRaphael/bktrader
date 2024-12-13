@@ -5,125 +5,7 @@ from pyecharts.charts import Kline, Bar, Grid, Scatter
 from pyecharts.commons.utils import JsCode
 
 
-def draw_ls_chart(positions: list):
-    opened_list = [
-        (
-            dt.date(1970, 1, 1) + dt.timedelta(days=pos.entry_dt),
-            round(pos.entry_price, 3),
-            pos.id,
-            pos.volume,
-            round(pos.pnl, 3),
-        )
-        for pos in positions
-    ]
-    entry_markers = (
-        # Scatter(init_opts=opts.InitOpts(theme="vintage"))
-        Scatter()
-        .add_xaxis([row[0] for row in opened_list])
-        .add_yaxis(
-            "entry",
-            [row[1:] for row in opened_list],  # multi-dimension data
-            symbol="arrow",
-            symbol_size=50,
-            symbol_rotate=180,
-            color="blue",
-            label_opts=opts.LabelOpts(
-                is_show=True,
-                position="bottom",
-                color="auto",
-                formatter="{@[2]}",  # id, 3rd value; formatter can also be JsCode(visit commit history)
-                distance=50,
-            ),
-        )
-        .set_global_opts(
-            tooltip_opts=opts.TooltipOpts(
-                trigger="item",
-                formatter=JsCode("""
-                    function (args) {
-                        return `exit_dt: ${args.value[0]}<br/>exit_price: ${args.value[1]}<br/>id: ${args.value[2]}<br/>vol: ${args.value[3]}<br/>pnl: ${args.value[4]}`;
-                    }
-                """),
-            ),
-            yaxis_opts=opts.AxisOpts(is_scale=True),
-            legend_opts=opts.LegendOpts(is_show=False),
-        )
-    )
-
-    counts = defaultdict(int)
-    closed_list = []
-    # groupby (dt, price) to solve text overlapping
-    for pos in positions:
-        if pos.exit_dt is not None:
-            x = dt.date(1970, 1, 1) + dt.timedelta(days=pos.exit_dt)
-            y = round(pos.exit_price, 3)
-            closed_list.append(
-                (
-                    x,
-                    y,
-                    pos.id,
-                    pos.volume,
-                    round(pos.pnl, 3),
-                    round(pos.fees, 3),
-                    counts[(x, y)],
-                )
-            )
-            counts[(x, y)] += 1
-
-    markpoints = [
-        {
-            "name": "exit_dt: {}<br/>exit_price: {}<br/>id: {}<br/>vol: {}<br/>pnl: {}<br/>fees:{}".format(*item),  # for js render
-            "coord": (item[0], item[1]),
-            "symbolSize": 0,  # necessary, make symbol invisible
-            "label": {
-                "show": True,
-                "position": "top",
-                "formatter": str(item[2]),
-                "color": "brown",
-                "fontSize": 12,
-                "distance": (item[6] + 1) * 25,  # solve text overlapping
-            },
-        }
-        for item in closed_list
-    ]
-
-    exit_markers = (
-        # Scatter(init_opts=opts.InitOpts(theme="vintage"))
-        Scatter()
-        .add_xaxis([row[0] for row in closed_list])
-        .add_yaxis(
-            "exit",
-            [row[1:] for row in closed_list],
-            symbol="arrow",
-            symbol_rotate=180,
-            color="brown",
-            label_opts=opts.LabelOpts(is_show=False),  # turn off global markpoint text
-            markpoint_opts=opts.MarkPointOpts(
-                data=markpoints,
-                label_opts=opts.LabelOpts(is_show=False),  # turn off global markpoint text
-            ),
-        )
-        .set_global_opts(
-            tooltip_opts=opts.TooltipOpts(
-                trigger="item",
-                formatter=JsCode("""
-                    function (params) {
-                        if (params.componentType === 'markPoint') {
-                            return params.name;
-                        } else {
-                            return `exit_dt: ${params.value[0]}<br/>exit_price: ${params.value[1]}`;
-                        }
-                    }
-                """),
-            ),
-            yaxis_opts=opts.AxisOpts(is_scale=True),
-            legend_opts=opts.LegendOpts(is_show=False),
-        )
-    )
-
-    return (entry_markers, exit_markers)
-
-
-def draw_ls_markers(positions: list):
+def draw_trade_markers(positions: list):
     up_arrow_svg = "path://M0,0 L10,-10 L20,0 L10,-2 Z"
     down_arrow_svg = "path://M0,0 L10,10 L20,0 L10,2 Z"
 
@@ -221,78 +103,27 @@ def draw_ls_markers(positions: list):
     return markers
 
 
-def draw_candles(symbol: str, quotes: list[tuple], positions: list):
+def draw_candles_with_markers(quotes: list[tuple], positions: list):
     """tuple fields: date,open,close,low,high,volume"""
     # preprocess quotes
     dates = [row[0] for row in quotes]
     oclh = [row[1:-1] for row in quotes]
-    vols = [(i, row[-1], -1 if row[1] > row[2] else 1) for i, row in enumerate(quotes)]
+    vol_bar_items = [
+        {
+            "value": row[-1],
+            "itemStyle": {"color": "green" if row[1] >= row[2] else "red"},
+        }
+        for row in quotes
+    ]
 
-    kline = (
-        Kline()
-        .add_xaxis(xaxis_data=dates)
-        .add_yaxis(
-            symbol,
-            y_axis=oclh,
-            itemstyle_opts=opts.ItemStyleOpts(
-                color="#ef232a",
-                color0="#14b143",
-                border_color="#8A0000",
-                border_color0="#008F28",
-            ),
-        )
-        .set_global_opts(
-            legend_opts=opts.LegendOpts(is_show=True),
-            datazoom_opts=[
-                opts.DataZoomOpts(
-                    type_="inside",
-                    xaxis_index=[0, 1],  # kline and volume bars
-                    range_start=0,
-                    range_end=100,
-                ),
-                opts.DataZoomOpts(
-                    type_="slider",
-                    xaxis_index=[0, 1],  # kline and volume bars
-                    range_start=0,
-                    range_end=100,
-                ),
-            ],
-            visualmap_opts=opts.VisualMapOpts(
-                is_show=False,
-                series_index=1,  # map to volume bars
-                is_piecewise=True,
-                pieces=[
-                    {"value": 1, "color": "#ef232a"},
-                    {"value": -1, "color": "#14b143"},
-                ],
-            ),
-            tooltip_opts=opts.TooltipOpts(
-                trigger="item",
-                axis_pointer_type="cross",
-                formatter=JsCode("""
-                    function (params) {
-                        if (params.componentType === 'markPoint') {
-                            return params.name;
-                        } else {
-                            return params.seriesName + ': ' + params.value.length + '<br>' + params.value;
-                        }
-                    }
-                """),
-            ),
-            axispointer_opts=opts.AxisPointerOpts(
-                is_show=True,
-                # link=[{"xAxisIndex": "all"}],
-                link=[{"xAxisIndex": [0, 1]}],
-            ),
-        )
-    )
-
-    bar = (
+    # prepare volume bars
+    vol_bars = (
         Bar()
         .add_xaxis(xaxis_data=dates)
         .add_yaxis(
-            series_name="Volume",
-            y_axis=vols,
+            series_name="Volumes",
+            y_axis=vol_bar_items,
+            bar_width="80%",
             label_opts=opts.LabelOpts(is_show=False),
         )
         .set_global_opts(
@@ -310,12 +141,66 @@ def draw_candles(symbol: str, quotes: list[tuple], positions: list):
         )
     )
 
-    markers = draw_ls_markers(positions)
-    overlapped_kline = kline.overlap(markers)
+    # prepare kline
+    kline = (
+        Kline()
+        .add_xaxis(xaxis_data=dates)
+        .add_yaxis(
+            "Candles",
+            y_axis=oclh,
+            bar_width="80%",
+            itemstyle_opts=opts.ItemStyleOpts(
+                color="red",
+                color0="green",
+                border_color="#8A0000",
+                border_color0="#008F28",
+            ),
+        )
+        .set_global_opts(
+            legend_opts=opts.LegendOpts(is_show=False),
+            datazoom_opts=[
+                opts.DataZoomOpts(
+                    type_="inside",
+                    xaxis_index=[0, 1],  # kline and volume bars
+                    range_start=0,
+                    range_end=100,
+                ),
+                opts.DataZoomOpts(
+                    type_="slider",
+                    xaxis_index=[0, 1],  # kline and volume bars
+                    range_start=0,
+                    range_end=100,
+                ),
+            ],
+            tooltip_opts=opts.TooltipOpts(
+                trigger="item",
+                axis_pointer_type="cross",
+                formatter=JsCode("""
+                    function (args) {
+                        if (args.componentType === 'markPoint') {
+                            return args.name;
+                        } else if (args.seriesName === 'Volumes') {
+                            return `${args.seriesName}: ${args.value}`;
+                        } else if (args.seriesName === 'Candles') {
+                            return `date: ${args.name}<br/>Open: ${args.value[1]}<br/>Close: ${args.value[2]}<br/>Low: ${args.value[3]}<br/>High: ${args.value[4]}`;
+                        }
+                    }
+                """),
+            ),
+            axispointer_opts=opts.AxisPointerOpts(
+                is_show=True,
+                link=[{"xAxisIndex": "all"}],  # link all axis
+            ),
+        )
+    )
+
+    markers = draw_trade_markers(positions)
+    kline_with_markers = kline.overlap(markers)
 
     # kline + Bar
-    grid_chart = Grid(init_opts=opts.InitOpts(width="100%", height="700px", theme="vintage"))
-    grid_chart.add(overlapped_kline, grid_opts=opts.GridOpts(pos_left=50, pos_top=20, pos_right=20, height="70%"))
-    grid_chart.add(bar, grid_opts=opts.GridOpts(pos_left=50, pos_top="75%", pos_right=20, height="15%"))
+    # grid_chart = Grid(init_opts=opts.InitOpts(width="100%", height="700px", theme="vintage"))  # for jupyter debug
+    grid_chart = Grid(init_opts=opts.InitOpts(width="100%", height="700px"))
+    grid_chart.add(kline_with_markers, grid_opts=opts.GridOpts(pos_left=50, pos_top=20, pos_right=20, height="70%", is_contain_label=True))  # is_contain_label 始终让label在里面
+    grid_chart.add(vol_bars, grid_opts=opts.GridOpts(pos_left=50, pos_top="75%", pos_right=20, height="15%"))
 
     return grid_chart
