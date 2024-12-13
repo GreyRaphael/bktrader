@@ -17,6 +17,7 @@ def draw_ls_chart(positions: list):
         for pos in positions
     ]
     entry_markers = (
+        # Scatter(init_opts=opts.InitOpts(theme="vintage"))
         Scatter()
         .add_xaxis([row[0] for row in opened_list])
         .add_yaxis(
@@ -24,7 +25,16 @@ def draw_ls_chart(positions: list):
             [row[1:] for row in opened_list],
             symbol="arrow",
             color="blue",
-            label_opts=opts.LabelOpts(is_show=False),
+            label_opts=opts.LabelOpts(
+                is_show=True,
+                position="bottom",
+                color="auto",
+                formatter=JsCode("""
+                    function (params) {
+                        return params.value[2];
+                    }
+                    """),
+            ),
         )
         .set_global_opts(
             tooltip_opts=opts.TooltipOpts(
@@ -57,6 +67,7 @@ def draw_ls_chart(positions: list):
     ]
 
     exit_markers = (
+        # Scatter(init_opts=opts.InitOpts(theme="vintage"))
         Scatter()
         .add_xaxis([row[0] for row in closed_list])
         .add_yaxis(
