@@ -127,6 +127,7 @@ def draw_ls_markers(positions: list):
     up_arrow_svg = "path://M0,0 L10,-10 L20,0 L10,-2 Z"
     down_arrow_svg = "path://M0,0 L10,10 L20,0 L10,2 Z"
 
+    # prepare entry markpoints
     opened_list = [
         (
             dt.date(1970, 1, 1) + dt.timedelta(days=pos.entry_dt),
@@ -147,13 +148,16 @@ def draw_ls_markers(positions: list):
             "label": {
                 "show": True,
                 "position": "bottom",
-                "formatter": str(item[2]),
                 "color": "auto",
                 "distance": 20,
+                "fontSize": 12,
+                "formatter": str(item[2]),
             },
         }
         for item in opened_list
     ]
+
+    # prepare exit markpoints
     counts = defaultdict(int)
     closed_list = []
     # groupby (dt, price) to solve text overlapping
@@ -177,30 +181,31 @@ def draw_ls_markers(positions: list):
         {
             "name": "exit_dt: {}<br/>exit_price: {}<br/>id: {}<br/>vol: {}<br/>pnl: {}<br/>fees:{}".format(*item),  # for js render
             "coord": (item[0], item[1] * 1.02),
-            "symbolSize": 10,
             "symbol": down_arrow_svg,
+            "symbolSize": 10,
             "itemStyle": {"color": "magenta"},
             "label": {
                 "show": True,
                 "position": "top",
-                "formatter": str(item[2]),
                 "color": "auto",
-                "fontSize": 12,
                 "distance": (item[6] + 1) * 20,  # solve text overlapping
+                "fontSize": 12,
+                "formatter": str(item[2]),
             },
         }
         for item in closed_list
     ]
 
+    # merge opened and closed
     merged_list = opened_list + closed_list
     markers = (
-        # Scatter()
-        Scatter(init_opts=opts.InitOpts(theme="vintage"))
+        Scatter()
+        # Scatter(init_opts=opts.InitOpts(theme="vintage")) # for debug
         .add_xaxis([row[0] for row in merged_list])
         .add_yaxis(
             "markers",
             y_axis=[row[1] for row in merged_list],
-            symbol_size=0,
+            symbol_size=0,  # necessary, make origin symbol invisible
             label_opts=opts.LabelOpts(is_show=False),
             markpoint_opts=opts.MarkPointOpts(
                 data=entry_markpoints + exit_markpoints,
