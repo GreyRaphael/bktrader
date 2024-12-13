@@ -17,19 +17,19 @@ def draw_ls_chart(positions: list):
         for pos in positions
     ]
     entry_markers = (
-        Scatter(init_opts=opts.InitOpts(theme="vintage"))
-        # Scatter()
+        # Scatter(init_opts=opts.InitOpts(theme="vintage"))
+        Scatter()
         .add_xaxis([row[0] for row in opened_list])
         .add_yaxis(
             "entry",
-            [row[1:] for row in opened_list],
+            [row[1:] for row in opened_list],  # multi-dimension data
             symbol="arrow",
             color="blue",
             label_opts=opts.LabelOpts(
                 is_show=True,
                 position="bottom",
                 color="auto",
-                formatter="{@[2]}",
+                formatter="{@[2]}",  # id, 3rd value; formatter can also be JsCode(visit commit history)
             ),
         )
         .set_global_opts(
@@ -47,7 +47,7 @@ def draw_ls_chart(positions: list):
 
     counts = defaultdict(int)
     closed_list = []
-    # groupby (dt, price)
+    # groupby (dt, price) to solve text overlapping
     for pos in positions:
         if pos.exit_dt is not None:
             x = dt.date(1970, 1, 1) + dt.timedelta(days=pos.exit_dt)
@@ -67,23 +67,24 @@ def draw_ls_chart(positions: list):
 
     markpoints = [
         {
-            "name": "exit_dt: {}<br/>exit_price: {}<br/>id: {}<br/>vol: {}<br/>pnl: {}<br/>".format(*item),
+            "name": "exit_dt: {}<br/>exit_price: {}<br/>id: {}<br/>vol: {}<br/>pnl: {}<br/>fees:{}".format(*item),  # for js render
             "coord": (item[0], item[1]),
-            "symbolSize": 0,
+            "symbolSize": 0,  # necessary, make symbol invisible
             "label": {
                 "show": True,
                 "position": "top",
                 "formatter": str(item[2]),
                 "color": "brown",
                 "fontSize": 12,
-                "distance": (item[6] + 1) * 20,
+                "distance": (item[6] + 1) * 20,  # solve text overlapping
             },
         }
         for item in closed_list
     ]
 
     exit_markers = (
-        Scatter(init_opts=opts.InitOpts(theme="vintage"))
+        # Scatter(init_opts=opts.InitOpts(theme="vintage"))
+        Scatter()
         .add_xaxis([row[0] for row in closed_list])
         .add_yaxis(
             "exit",
@@ -91,7 +92,7 @@ def draw_ls_chart(positions: list):
             symbol="arrow",
             symbol_rotate=180,
             color="brown",
-            label_opts=opts.LabelOpts(is_show=False),
+            label_opts=opts.LabelOpts(is_show=False),  # turn off global markpoint text
             markpoint_opts=opts.MarkPointOpts(
                 data=markpoints,
                 label_opts=opts.LabelOpts(is_show=False),  # turn off global markpoint text
