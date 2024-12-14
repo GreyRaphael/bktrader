@@ -105,7 +105,7 @@ def draw_trade_markers(positions: list):
     return markers
 
 
-def draw_candles_with_markers(quotes: list[tuple], positions: list):
+def draw_candles_with_markers(title: str, quotes: list[tuple], positions: list):
     """tuple fields: date,open,close,low,high,volume"""
     # preprocess quotes
     dates = [row[0] for row in quotes]
@@ -159,6 +159,7 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list):
             ),
         )
         .set_global_opts(
+            title_opts=opts.TitleOpts(title=title, pos_left="center"),
             legend_opts=opts.LegendOpts(is_show=False),
             datazoom_opts=[
                 opts.DataZoomOpts(
@@ -247,7 +248,7 @@ def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "ba
     return records + [record_today]
 
 
-def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db"):
+def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", title: str = None):
     from quote.history import DuckdbReplayer
     from engine import BacktestEngine
 
@@ -256,11 +257,11 @@ def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str
     engine.run()
 
     quotes = fetch_history_candles(code, start, end, uri)
-    chart = draw_candles_with_markers(quotes, strategy.broker.positions)
+    chart = draw_candles_with_markers(title, quotes, strategy.broker.positions)
     return chart
 
 
-def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db"):
+def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", title: str = None):
     from quote.history import DuckdbReplayer
     from engine import TradeEngine
 
@@ -270,5 +271,5 @@ def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str 
     engine.run()
 
     quotes = fetch_realtime_candles(code, start, last_quote, uri)
-    chart = draw_candles_with_markers(quotes, strategy.broker.positions)
+    chart = draw_candles_with_markers(title, quotes, strategy.broker.positions)
     return chart
