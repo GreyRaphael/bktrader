@@ -25,6 +25,25 @@
     <script>
         $(
             function () {
+                // Function to format a Date object to YYYY-MM-DD
+                function formatDate(date) {
+                    let year = date.getFullYear();
+                    let month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+                    let day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+
+                // Get today's date
+                let today = new Date();
+
+                // Get the date one year ago
+                let oneYearAgo = new Date();
+                oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+                // Set the default values for the input fields
+                $('#end').val(formatDate(today));
+                $('#start').val(formatDate(oneYearAgo));
+
                 // Add event listener to the submit button
                 $('#submitBtn').click(function () {
                     // Get values from input fields
