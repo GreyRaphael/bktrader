@@ -3,8 +3,10 @@ from collections import defaultdict
 from pyecharts import options as opts
 from pyecharts.charts import Kline, Bar, Grid, Scatter
 from pyecharts.commons.utils import JsCode
+import duckdb
 
 
+# long-short markers and texts
 def draw_trade_markers(positions: list):
     up_arrow_svg = "path://M0,0 L10,-10 L20,0 L10,-2 Z"
     down_arrow_svg = "path://M0,0 L10,10 L20,0 L10,2 Z"
@@ -204,3 +206,69 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list):
     grid_chart.add(vol_bars, grid_opts=opts.GridOpts(pos_left=50, pos_top="75%", pos_right=20, height="15%"))
 
     return grid_chart
+
+
+def fetch_history_candles(code: int, start: dt.date, end: dt.date, uri: str = "bar1d.db") -> list[tuple]:
+    query = """
+    SELECT
+        dt,
+        ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+        ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+        ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+        ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+        volume,
+    FROM
+        etf
+    WHERE 
+        code = ? AND dt BETWEEN ? AND ?
+    """
+    with duckdb.connect(uri, read_only=True) as conn:
+        records = conn.execute(query, [code, start, end]).fetchall()
+    return records
+
+
+def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "bar1d.db") -> list[tuple]:
+    query = """
+    SELECT
+        dt,
+        ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+        ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+        ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+        ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+        volume,
+    FROM
+        etf
+    WHERE 
+        code = ? AND dt BETWEEN ? AND ?
+    """
+    with duckdb.connect(uri, read_only=True) as conn:
+        records = conn.execute(query, [code, start, dt.date.today()]).fetchall()
+    record_today = (last_quote.dt, last_quote.open, last_quote.close, last_quote.low, last_quote.high, last_quote.volume)
+    return records + [record_today]
+
+
+def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db"):
+    from quote.history import DuckdbReplayer
+    from engine import BacktestEngine
+
+    replayer = DuckdbReplayer(start, end, code, uri)
+    engine = BacktestEngine(replayer, strategy)
+    engine.run()
+
+    quotes = fetch_history_candles(code, start, end, uri)
+    chart = draw_candles_with_markers(quotes, strategy.broker.positions)
+    return chart
+
+
+def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db"):
+    from quote.history import DuckdbReplayer
+    from engine import TradeEngine
+
+    end = dt.date.today()
+    replayer = DuckdbReplayer(start, end, code, uri)
+    engine = TradeEngine(replayer, last_quote, strategy)
+    engine.run()
+
+    quotes = fetch_realtime_candles(code, start, last_quote, uri)
+    chart = draw_candles_with_markers(quotes, strategy.broker.positions)
+    return chart
