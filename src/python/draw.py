@@ -105,7 +105,7 @@ def draw_trade_markers(positions: list):
     return markers
 
 
-def draw_candles_with_markers(title: str, quotes: list[tuple], positions: list):
+def draw_candles_with_markers(quotes: list[tuple], positions: list, title: str = None):
     """tuple fields: date,open,close,low,high,volume"""
     # preprocess quotes
     dates = [row[0] for row in quotes]
@@ -257,7 +257,7 @@ def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str
     engine.run()
 
     quotes = fetch_history_candles(code, start, end, uri)
-    chart = draw_candles_with_markers(title, quotes, strategy.broker.positions)
+    chart = draw_candles_with_markers(quotes, strategy.broker.positions, title)
     return chart
 
 
@@ -271,5 +271,5 @@ def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str 
     engine.run()
 
     quotes = fetch_realtime_candles(code, start, last_quote, uri)
-    chart = draw_candles_with_markers(title, quotes, strategy.broker.positions)
+    chart = draw_candles_with_markers(quotes, strategy.broker.positions, title)
     return chart
