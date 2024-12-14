@@ -12,6 +12,7 @@ import duckdb
 
 from bktrader import strategy
 from view import backtest_history, backtest_realtime
+from draw import backtest_history, backtest_realtime
 from quote.realtime import XueQiuQuote
 from quote.history import DuckdbReplayer
 from engine import BacktestEngine, TradeEngine
@@ -38,7 +39,15 @@ def get_current_username(credentials: Annotated[HTTPBasicCredentials, Depends(se
     return credentials.username
 
 
-@app.get("/history/{code}")
+@app.get("/history")
+async def render_history(
+    request: Request,
+    username: Annotated[str, Depends(get_current_username)],
+):
+    return templates.TemplateResponse(request=request, name="history/single.html")
+
+
+@app.get("/his")
 async def history_backtest(
     request: Request,
     code: int,
@@ -56,10 +65,11 @@ async def history_backtest(
         profit_limit=0.15,
         # profit_limit=0.08,
     )
-    quoter = XueQiuQuote("bar1d.db")
+    uri = "bar1d.db"
+    quoter = XueQiuQuote(uri)
     quoter.get_quote(code)
-    chart = backtest_history(code, start, end, stg, "bar1d.db").properties(title=f'{code} {quoter.quote["name"]}').to_json()
-    return templates.TemplateResponse(request=request, name="index.html", context={"chart_json": chart, "usrname": username})
+    chart = backtest_history(code, start, end, stg, uri, title=f'{code} {quoter.quote["name"]}')
+    return chart.dump_options_with_quotes()
 
 
 @app.get("/benchmark/history/")

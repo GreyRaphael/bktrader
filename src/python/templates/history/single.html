@@ -1,0 +1,81 @@
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HistoryBacktest</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script type="text/javascript" src="https://assets.pyecharts.org/assets/echarts.min.js"></script>
+</head>
+
+<body>
+    <div>
+        <label for="start">Start Date:</label>
+        <input type="date" id="start" value="2023-01-01">
+        <label for="end">End Date:</label>
+        <input type="date" id="end" value="2024-12-14">
+        <label for="inputNum">Input Number:</label>
+        <input type="number" id="inputNum" value="513650">
+        <button id="submitBtn">Submit</button>
+    </div>
+
+    <div id="candles" style="width:2000px; height:700px;"></div>
+
+    <script>
+        $(
+            function () {
+                var chart = echarts.init(document.getElementById('candles'), 'white', { renderer: 'canvas' });
+
+                // Set default values when the page loads
+                function setDefaults() {
+                    var today = new Date();
+                    var lastYear = new Date(today);
+                    lastYear.setFullYear(today.getFullYear() - 1); // Subtract 1 year for start date
+
+                    // Format dates as yyyy-mm-dd
+                    var startDate = lastYear.toISOString().split('T')[0];
+                    var endDate = today.toISOString().split('T')[0];
+
+                    // Set the default values for input fields
+                    $('#start').val(startDate);
+                    $('#end').val(endDate);
+                }
+
+                // Call setDefaults to initialize the fields
+                setDefaults();
+
+                // Add event listener to the submit button
+                $('#submitBtn').click(function () {
+                    // Get values from input fields
+                    var startDate = $('#start').val();
+                    var endDate = $('#end').val();
+                    var inputNum = $('#inputNum').val();
+
+                    // Perform AJAX request to send data
+                    $.ajax({
+                        type: "GET",
+                        url: "/his",
+                        data: {
+                            code: inputNum,
+                            start: startDate,
+                            end: endDate,
+                        },
+                        dataType: 'json',
+                        success: function (result) {
+                            // On success, update the chart
+                            chart.setOption(JSON.parse(result));
+                        },
+                        error: function (xhr, status, error) {
+                            console.error("AJAX request failed: " + error);
+                        }
+                    });
+                });
+            }
+        );
+    </script>
+</body>
+
+</html>
