@@ -47,7 +47,7 @@ async def render_history(
     return templates.TemplateResponse(request=request, name="history/single.html")
 
 
-@app.get("/his")
+@app.get("/hisback")
 async def history_backtest(
     request: Request,
     code: int,
@@ -69,7 +69,8 @@ async def history_backtest(
     quoter = XueQiuQuote(uri)
     quoter.get_quote(code)
     chart = backtest_history(code, start, end, stg, uri, title=f'{code} {quoter.quote["name"]}')
-    return chart.dump_options_with_quotes()
+    # dumpy json is a bad idea, format not match
+    return chart.render_embed()
 
 
 @app.get("/benchmark/history/")
