@@ -245,7 +245,7 @@ def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "ba
     """
     with duckdb.connect(uri, read_only=True) as conn:
         records = conn.execute(query, [code, start, dt.date.today()]).fetchall()
-    record_today = (last_quote.dt, last_quote.open, last_quote.close, last_quote.low, last_quote.high, last_quote.volume)
+    record_today = (dt.date(1970, 1, 1) + dt.timedelta(days=last_quote.dt), last_quote.open, last_quote.close, last_quote.low, last_quote.high, last_quote.volume)
     return records + [record_today]
 
 
