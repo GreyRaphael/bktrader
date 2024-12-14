@@ -47,6 +47,14 @@ async def render_history(
     return templates.TemplateResponse(request=request, name="history/single.html")
 
 
+@app.get("/realtime")
+async def render_realtime(
+    request: Request,
+    username: Annotated[str, Depends(get_current_username)],
+):
+    return templates.TemplateResponse(request=request, name="realtime/single.html")
+
+
 @app.get("/hisback")
 async def history_backtest(
     request: Request,
@@ -69,6 +77,31 @@ async def history_backtest(
     quoter = XueQiuQuote(uri)
     quoter.get_quote(code)
     chart = backtest_history(code, start, end, stg, uri, title=f'{code} {quoter.quote["name"]}')
+    # dumpy json is a bad idea, format not match
+    return chart.render_embed()
+
+
+@app.get("/realback")
+async def realtime_backtest(
+    request: Request,
+    code: int,
+    username: Annotated[str, Depends(get_current_username)],
+    start: dt.date = dt.date.today().replace(month=1, day=1),
+):
+    stg = strategy.GridCCI(
+        init_cash=1e5,
+        cum_quantile=0.3,
+        rank_period=15,
+        rank_limit=0.3,
+        cci_threshold=0.0,
+        max_active_pos_len=25,
+        profit_limit=0.15,
+        # profit_limit=0.08,
+    )
+    uri = "bar1d.db"
+    quoter = XueQiuQuote(uri)
+    last_quote = quoter.get_quote(code)
+    chart = backtest_realtime(code, start, last_quote, stg, uri, title=f'{code} {quoter.quote["name"]}')
     # dumpy json is a bad idea, format not match
     return chart.render_embed()
 
@@ -131,28 +164,3 @@ async def bench_history(
 
     bench_json = json.dumps(data)  # can handle nan automatically
     return templates.TemplateResponse(request=request, name="bench.html", context={"usrname": username, "bench_json": bench_json})
-
-
-@app.get("/realtime/{code}")
-async def realtime_backtest(
-    request: Request,
-    code: int,
-    username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(month=1, day=1),
-):
-    stg = strategy.GridCCI(
-        init_cash=2e5,
-        cum_quantile=0.3,
-        rank_period=15,
-        rank_limit=0.3,
-        cci_threshold=0.0,
-        max_active_pos_len=50,
-        profit_limit=0.15,
-        # profit_limit=0.08,
-    )
-    uri = "bar1d.db"
-    quoter = XueQiuQuote(uri)
-    last_quote = quoter.get_quote(code)
-    print(last_quote)
-    chart = backtest_realtime(code, start, last_quote, stg, uri).to_json()
-    return templates.TemplateResponse(request=request, name="index.html", context={"chart_json": chart, "usrname": username})
