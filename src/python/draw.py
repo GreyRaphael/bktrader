@@ -33,8 +33,8 @@ def draw_trade_markers(positions: list):
                 "show": True,
                 "position": "bottom",
                 "color": "auto",
-                "distance": 20,
-                "fontSize": 12,
+                "distance": 13,
+                "fontSize": 10,
                 "formatter": str(item[2]),
             },
         }
@@ -72,8 +72,8 @@ def draw_trade_markers(positions: list):
                 "show": True,
                 "position": "top",
                 "color": "auto",
-                "distance": (item[6] + 1) * 20,  # solve text overlapping
-                "fontSize": 12,
+                "distance": (item[6] + 1) * 13,  # solve text overlapping
+                "fontSize": 10,
                 "formatter": str(item[2]),
             },
         }
@@ -161,6 +161,7 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list, title: str =
         .set_global_opts(
             title_opts=opts.TitleOpts(title=title, pos_left="center"),
             legend_opts=opts.LegendOpts(is_show=False),
+            yaxis_opts=opts.AxisOpts(is_scale=True, boundary_gap=["0%", "20%"]),
             datazoom_opts=[
                 opts.DataZoomOpts(
                     type_="inside",
@@ -203,8 +204,8 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list, title: str =
     # kline + Bar
     # grid_chart = Grid(init_opts=opts.InitOpts(width="100%", height="700px", theme="vintage"))  # for jupyter debug
     grid_chart = Grid(init_opts=opts.InitOpts(width="100%", height="700px"))
-    grid_chart.add(kline_with_markers, grid_opts=opts.GridOpts(pos_left=50, pos_top=20, pos_right=20, height="70%", is_contain_label=True))  # is_contain_label 始终让label在里面
-    grid_chart.add(vol_bars, grid_opts=opts.GridOpts(pos_left=50, pos_top="75%", pos_right=20, height="15%"))
+    grid_chart.add(kline_with_markers, grid_opts=opts.GridOpts(pos_left="1%", pos_top="5%", pos_right="0.5%", height="70%", is_contain_label=True))  # is_contain_label 始终让label在里面
+    grid_chart.add(vol_bars, grid_opts=opts.GridOpts(pos_left="1%", pos_top="75%", pos_right="0.5%", height="15%"))
 
     return grid_chart
 
