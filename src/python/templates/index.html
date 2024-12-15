@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Today Available</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <table id="availableTable" class="display" style="width:100%">
+            <thead>
+                <tr>
+                    <th>code</th>
+                    <th>portfolio_profit</th>
+                    <th>max_drawdown</th>
+                    <th>sharpe_annual</th>
+                    <th>sharpe_volatility</th>
+                    <th>sharpe_ratio</th>
+                    <th>sortino_annual</th>
+                    <th>sortino_volatility</th>
+                    <th>sortino_ratio</th>
+                    <th>sortino_ratio</th>
+                    <th>sortino_ratio</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+
+    <script>
+        const dataSet = {{ available_json | safe }};
+        new DataTable('#availableTable', {
+            paging: false,
+            columns: [
+                {
+                    title: 'code',
+                    // The first column, index 0
+                    data: 0, // Refers to the first element in each sublist
+                    render: function (data, type, row, meta) {
+                        // Create a clickable link that opens in a new tab
+                        return `<a href="/realtime/${encodeURIComponent(data)}" target="_blank">${data}</a>`;
+                    }
+                },
+                { title: 'portfolio_profit' },
+                { title: 'max_drawdown' },
+                { title: 'sharpe_annual.' },
+                { title: 'sharpe_volatility' },
+                { title: 'sharpe_ratio' },
+                { title: 'sortino_annual.' },
+                { title: 'sortino_volatility' },
+                { title: 'sortino_ratio' },
+                { title: 'entry_dt' },
+                { title: 'exit_dt' },
+            ],
+            data: dataSet
+        });
+    </script>
+</body>
+
+</html>
