@@ -11,7 +11,6 @@ from fastapi.templating import Jinja2Templates
 import duckdb
 
 from bktrader import strategy
-from view import backtest_history, backtest_realtime
 from draw import backtest_history, backtest_realtime
 from quote.realtime import XueQiuQuote
 from quote.history import DuckdbReplayer
@@ -39,24 +38,8 @@ def get_current_username(credentials: Annotated[HTTPBasicCredentials, Depends(se
     return credentials.username
 
 
-@app.get("/history")
+@app.get("/history/{code}")
 async def render_history(
-    request: Request,
-    username: Annotated[str, Depends(get_current_username)],
-):
-    return templates.TemplateResponse(request=request, name="history/single.html")
-
-
-@app.get("/realtime")
-async def render_realtime(
-    request: Request,
-    username: Annotated[str, Depends(get_current_username)],
-):
-    return templates.TemplateResponse(request=request, name="realtime/single.html")
-
-
-@app.get("/hisback")
-async def history_backtest(
     request: Request,
     code: int,
     username: Annotated[str, Depends(get_current_username)],
@@ -77,8 +60,33 @@ async def history_backtest(
     quoter = XueQiuQuote(uri)
     quoter.get_quote(code)
     chart = backtest_history(code, start, end, stg, uri, title=f'{code} {quoter.quote["name"]}')
-    # dumpy json is a bad idea, format not match
-    return chart.render_embed()
+
+    (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
+    (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="history/single.html",
+        context={
+            "portfolio_profit": round(stg.broker.profit_net(), 3),
+            "max_drawdown": round(stg.broker.analyzer.max_drawdown(), 3),
+            "sharpe_annual": round(sharpe_annual, 3),
+            "sharpe_volatility": round(sharpe_volatility, 3),
+            "sharpe_ratio": round(sharpe_ratio, 3),
+            "sortino_annual": round(sortino_annual, 3),
+            "sortino_volatility": round(sortino_volatility, 3),
+            "sortino_ratio": round(sortino_ratio, 3),
+            "candles": chart.render_embed(),
+        },
+    )
+
+
+@app.get("/realtime")
+async def render_realtime(
+    request: Request,
+    username: Annotated[str, Depends(get_current_username)],
+):
+    return templates.TemplateResponse(request=request, name="realtime/single.html")
 
 
 @app.get("/realback")
@@ -151,7 +159,6 @@ async def bench_history(
         row = [
             code,
             round(stg.broker.profit_net(), 3),
-            # round(stg.broker.profit_position(), 3),
             round(stg.broker.analyzer.max_drawdown(), 3),
             round(sharpe_annual, 3),
             round(sharpe_volatility, 3),
@@ -163,4 +170,4 @@ async def bench_history(
         data.append(row)
 
     bench_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="bench.html", context={"usrname": username, "bench_json": bench_json})
+    return templates.TemplateResponse(request=request, name="history/bench.html", context={"bench_json": bench_json})

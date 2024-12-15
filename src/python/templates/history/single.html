@@ -4,74 +4,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HistoryBacktest</title>
+    <title>Backtest History</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script type="text/javascript" src="https://assets.pyecharts.org/assets/v5/echarts.min.js"></script>
 </head>
 
+<style>
+    table {
+        width: 50%;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 1%;
+        margin-bottom: 1%;
+    }
+
+    table,
+    th,
+    td {
+        border: 1px solid black;
+        border-collapse: collapse;
+    }
+</style>
+
 <body>
-    <div>
-        <label for="start">Start Date:</label>
-        <input type="date" id="start">
-        <label for="end">End Date:</label>
-        <input type="date" id="end">
-        <label for="inputNum">Input Number:</label>
-        <input type="number" id="inputNum" value="513650">
-        <button id="submitBtn">Submit</button>
-    </div>
-
-    <div id="candles" style="height: 750px;"></div>
-
-    <script>
-        $(
-            function () {
-                // Function to format a Date object to YYYY-MM-DD
-                function formatDate(date) {
-                    let year = date.getFullYear();
-                    let month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
-                    let day = String(date.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                }
-
-                // Get today's date
-                let today = new Date();
-
-                // Get the date one year ago
-                let oneYearAgo = new Date();
-                oneYearAgo.setFullYear(today.getFullYear() - 1);
-
-                // Set the default values for the input fields
-                $('#end').val(formatDate(today));
-                $('#start').val(formatDate(oneYearAgo));
-
-                // Add event listener to the submit button
-                $('#submitBtn').click(function () {
-                    // Get values from input fields
-                    var startDate = $('#start').val();
-                    var endDate = $('#end').val();
-                    var inputNum = $('#inputNum').val();
-
-                    // Perform AJAX request to send data
-                    $.ajax({
-                        type: "GET",
-                        url: "/hisback",
-                        data: {
-                            code: inputNum,
-                            start: startDate,
-                            end: endDate,
-                        },
-                        success: function (result) {
-                            // On success, update the chart
-                            $('#candles').html(result);
-                        },
-                        error: function (xhr, status, error) {
-                            console.error("AJAX request failed: " + error);
-                        }
-                    });
-                });
-            }
-        );
-    </script>
+    <table>
+        <thead>
+            <tr>
+                <th>portfolio_profit</th>
+                <th>max_drawdown</th>
+                <th>sharpe_annual</th>
+                <th>sharpe_volatility</th>
+                <th>sharpe_ratio</th>
+                <th>sortino_annual</th>
+                <th>sortino_volatility</th>
+                <th>sortino_ratio</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{portfolio_profit}}</td>
+                <td>{{max_drawdown}}</td>
+                <td>{{sharpe_annual}}</td>
+                <td>{{sharpe_volatility}}</td>
+                <td>{{sharpe_ratio}}</td>
+                <td>{{sortino_annual}}</td>
+                <td>{{sortino_volatility}}</td>
+                <td>{{sortino_ratio}}</td>
+            </tr>
+        </tbody>
+    </table>
+    <div style="height: 750px;">{{ candles|safe }}</div>
 </body>
 
 </html>
