@@ -81,20 +81,13 @@ async def render_history(
     )
 
 
-@app.get("/realtime")
+@app.get("/realtime/{code}")
 async def render_realtime(
-    request: Request,
-    username: Annotated[str, Depends(get_current_username)],
-):
-    return templates.TemplateResponse(request=request, name="realtime/single.html")
-
-
-@app.get("/realback")
-async def realtime_backtest(
     request: Request,
     code: int,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(month=1, day=1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    end: dt.date = dt.date.today(),
 ):
     stg = strategy.GridCCI(
         init_cash=1e5,
@@ -110,8 +103,25 @@ async def realtime_backtest(
     quoter = XueQiuQuote(uri)
     last_quote = quoter.get_quote(code)
     chart = backtest_realtime(code, start, last_quote, stg, uri, title=f'{code} {quoter.quote["name"]}')
-    # dumpy json is a bad idea, format not match
-    return chart.render_embed()
+
+    (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
+    (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="realtime/single.html",
+        context={
+            "portfolio_profit": round(stg.broker.profit_net(), 3),
+            "max_drawdown": round(stg.broker.analyzer.max_drawdown(), 3),
+            "sharpe_annual": round(sharpe_annual, 3),
+            "sharpe_volatility": round(sharpe_volatility, 3),
+            "sharpe_ratio": round(sharpe_ratio, 3),
+            "sortino_annual": round(sortino_annual, 3),
+            "sortino_volatility": round(sortino_volatility, 3),
+            "sortino_ratio": round(sortino_ratio, 3),
+            "candles": chart.render_embed(),
+        },
+    )
 
 
 @app.get("/benchmark/history/")
