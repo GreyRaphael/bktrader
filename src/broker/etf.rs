@@ -46,7 +46,7 @@ impl EtfBroker {
             positions: Vec::with_capacity(100),
             total_fees: 0.0,
             analyzer: Analyzer::new(),
-            pos_id: 1,
+            pos_id: 0,
         }
     }
 
