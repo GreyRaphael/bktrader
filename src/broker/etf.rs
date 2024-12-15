@@ -19,6 +19,7 @@ pub struct EtfBroker {
     total_fees: f64,
     #[pyo3(get)]
     analyzer: Analyzer,
+    pos_id: u32,
 }
 
 impl EtfBroker {
@@ -45,6 +46,7 @@ impl EtfBroker {
             positions: Vec::with_capacity(100),
             total_fees: 0.0,
             analyzer: Analyzer::new(),
+            pos_id: 1,
         }
     }
 
@@ -55,7 +57,8 @@ impl EtfBroker {
         self.cash -= deal_amount + fees;
 
         // open position
-        let mut pos = Position::new(bar.dt, price, volume);
+        self.pos_id += 1;
+        let mut pos = Position::new(self.pos_id, bar.dt, price, volume);
         pos.fees = fees;
         pos.stop_loss = stop_loss;
         pos.take_profit = take_profit;
@@ -97,7 +100,7 @@ impl EtfBroker {
             let position = &mut self.positions[index];
             position.fees = avg_fees;
             position.fees += fees;
-            position.pnl = Some((price - position.entry_price) * position.volume);
+            position.pnl = (price - position.entry_price) * position.volume;
             // println!("exit {:?}", position);
         }
     }
@@ -110,7 +113,7 @@ impl EtfBroker {
 
     pub fn update_active_pnl(&mut self, bar: &Bar) {
         self.positions.iter_mut().filter(|pos| pos.status == PositionStatus::Opened).for_each(|pos| {
-            pos.pnl = Some((bar.close - pos.entry_price) * pos.volume);
+            pos.pnl = (bar.close - pos.entry_price) * pos.volume;
         });
     }
 
@@ -165,15 +168,15 @@ impl EtfBroker {
     }
 
     pub fn profit_float(&self) -> f64 {
-        self.positions.iter().map(|pos| pos.pnl.unwrap()).sum()
+        self.positions.iter().map(|pos| pos.pnl).sum()
     }
 
     pub fn profit_active(&self) -> f64 {
-        self.positions.iter().filter(|pos| pos.status == PositionStatus::Opened).map(|pos| pos.pnl.unwrap()).sum()
+        self.positions.iter().filter(|pos| pos.status == PositionStatus::Opened).map(|pos| pos.pnl).sum()
     }
 
     pub fn profit_taken(&self) -> f64 {
-        self.positions.iter().filter(|pos| pos.status == PositionStatus::Closed).map(|pos| pos.pnl.unwrap()).sum()
+        self.positions.iter().filter(|pos| pos.status == PositionStatus::Closed).map(|pos| pos.pnl).sum()
     }
 
     pub fn profit_position(&self) -> f64 {

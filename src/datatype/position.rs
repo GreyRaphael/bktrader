@@ -1,8 +1,4 @@
 use pyo3::prelude::*;
-use std::sync::atomic::{AtomicU32, Ordering};
-
-// static AtomicU32 is used to generate unique IDs for each position
-static POSITION_ID_COUNTER: AtomicU32 = AtomicU32::new(1); // Start from 1
 
 #[pyclass(eq, eq_int)]
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -33,7 +29,7 @@ pub struct Position {
     #[pyo3(get)]
     pub volume: f64,
     #[pyo3(get)]
-    pub pnl: Option<f64>, // gross pnl without considering commissions
+    pub pnl: f64, // gross pnl without considering commissions
     #[pyo3(get)]
     pub fees: f64,
 }
@@ -41,9 +37,8 @@ pub struct Position {
 #[pymethods]
 impl Position {
     #[new]
-    pub fn new(entry_dt: i32, entry_price: f64, volume: f64) -> Self {
-        let id = POSITION_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
-        Position {
+    pub fn new(id: u32, entry_dt: i32, entry_price: f64, volume: f64) -> Self {
+        Self {
             id,
             entry_dt,
             exit_dt: None,
@@ -53,7 +48,7 @@ impl Position {
             take_profit: None,
             status: PositionStatus::Opened,
             volume,
-            pnl: None,
+            pnl: 0.0,
             fees: 0.0,
         }
     }
