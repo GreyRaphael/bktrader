@@ -43,7 +43,7 @@ async def render_history(
     request: Request,
     code: int,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(month=1, day=1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
     end: dt.date = dt.date.today(),
 ):
     stg = strategy.GridCCI(
@@ -118,7 +118,7 @@ async def realtime_backtest(
 async def bench_history(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(month=1, day=1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
     end: dt.date = dt.date.today(),
 ):
     uri = "bar1d.db"
