@@ -123,8 +123,8 @@ async def render_lof_history(
     )
 
 
-@app.get("/realtime/{code}")
-async def render_realtime(
+@app.get("/etf/realtime/{code}")
+async def render_etf_realtime(
     request: Request,
     code: int,
     username: Annotated[str, Depends(get_current_username)],
@@ -143,6 +143,46 @@ async def render_realtime(
     quoter = XueQiuQuote(ETF_DB_URI)
     last_quote = quoter.get_quote(code)
     chart = backtest_realtime(code, start, last_quote, stg, ETF_DB_URI, title=f'{code} {quoter.quote["name"]}')
+
+    (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
+    (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="realtime/single.html",
+        context={
+            "portfolio_profit": round(stg.broker.profit_net(), 3),
+            "max_drawdown": round(stg.broker.analyzer.max_drawdown(), 3),
+            "sharpe_annual": round(sharpe_annual, 3),
+            "sharpe_volatility": round(sharpe_volatility, 3),
+            "sharpe_ratio": round(sharpe_ratio, 3),
+            "sortino_annual": round(sortino_annual, 3),
+            "sortino_volatility": round(sortino_volatility, 3),
+            "sortino_ratio": round(sortino_ratio, 3),
+            "candles": chart.render_embed(),
+        },
+    )
+
+
+@app.get("/lof/realtime/{code}")
+async def render_lof_realtime(
+    request: Request,
+    code: int,
+    username: Annotated[str, Depends(get_current_username)],
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+):
+    stg = strategy.GridCCI(
+        init_cash=1e5,
+        cum_quantile=0.3,
+        rank_period=15,
+        rank_limit=0.3,
+        cci_threshold=0.0,
+        max_active_pos_len=25,
+        profit_limit=0.08,
+    )
+    quoter = XueQiuQuote(LOF_DB_URI)
+    last_quote = quoter.get_quote(code)
+    chart = backtest_realtime(code, start, last_quote, stg, LOF_DB_URI, title=f'{code} {quoter.quote["name"]}')
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
