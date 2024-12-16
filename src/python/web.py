@@ -18,7 +18,7 @@ from engine import BacktestEngine, TradeEngine
 
 # Load environment variables from the .env file (if present)
 load_dotenv()
-DB_URI = os.getenv("ETF_DB_URI")
+ETF_DB_URI = os.getenv("ETF_DB_URI")
 
 app = FastAPI()
 security = HTTPBasic()
@@ -57,9 +57,9 @@ async def render_history(
         profit_limit=0.15,
         # profit_limit=0.08,
     )
-    quoter = XueQiuQuote(DB_URI)
+    quoter = XueQiuQuote(ETF_DB_URI)
     quoter.get_quote(code)
-    chart = backtest_history(code, start, end, stg, DB_URI, title=f'{code} {quoter.quote["name"]}')
+    chart = backtest_history(code, start, end, stg, ETF_DB_URI, title=f'{code} {quoter.quote["name"]}')
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
@@ -98,9 +98,9 @@ async def render_realtime(
         profit_limit=0.15,
         # profit_limit=0.08,
     )
-    quoter = XueQiuQuote(DB_URI)
+    quoter = XueQiuQuote(ETF_DB_URI)
     last_quote = quoter.get_quote(code)
-    chart = backtest_realtime(code, start, last_quote, stg, DB_URI, title=f'{code} {quoter.quote["name"]}')
+    chart = backtest_realtime(code, start, last_quote, stg, ETF_DB_URI, title=f'{code} {quoter.quote["name"]}')
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
@@ -129,7 +129,7 @@ async def bench_history(
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
     end: dt.date = dt.date.today(),
 ):
-    with duckdb.connect(DB_URI, read_only=True) as conn:
+    with duckdb.connect(ETF_DB_URI, read_only=True) as conn:
         query = """
         SELECT DISTINCT code 
         FROM bar1d 
@@ -157,7 +157,7 @@ async def bench_history(
             profit_limit=0.15,
             # profit_limit=0.08,
         )
-        replayer = DuckdbReplayer(start, end, code, DB_URI)
+        replayer = DuckdbReplayer(start, end, code, ETF_DB_URI)
         engine = BacktestEngine(replayer, stg)
         engine.run()
 
@@ -187,7 +187,7 @@ async def bench_realtime(
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
 ):
     # download real time quotes
-    quoter = EastEtfQuote(DB_URI)
+    quoter = EastEtfQuote(ETF_DB_URI)
     quoter.update()
 
     data = []
@@ -204,7 +204,7 @@ async def bench_realtime(
             # profit_limit=0.08,
         )
 
-        replayer = DuckdbReplayer(start, dt.date.today(), code, DB_URI)
+        replayer = DuckdbReplayer(start, dt.date.today(), code, ETF_DB_URI)
         engine = TradeEngine(replayer, last_quote, stg)
         engine.run()
 
@@ -234,7 +234,7 @@ async def today_available(
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
 ):
     # download real time quotes
-    quoter = EastEtfQuote(DB_URI)
+    quoter = EastEtfQuote(ETF_DB_URI)
     quoter.update()
 
     data = []
@@ -251,7 +251,7 @@ async def today_available(
             # profit_limit=0.08,
         )
 
-        replayer = DuckdbReplayer(start, dt.date.today(), code, DB_URI)
+        replayer = DuckdbReplayer(start, dt.date.today(), code, ETF_DB_URI)
         engine = TradeEngine(replayer, last_quote, stg)
         engine.run()
 
