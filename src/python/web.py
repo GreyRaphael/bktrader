@@ -204,8 +204,8 @@ async def render_lof_realtime(
     )
 
 
-@app.get("/benchmark/history/")
-async def bench_history(
+@app.get("/etf/benchmark/history/")
+async def bench_etf_history(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
@@ -222,6 +222,7 @@ async def bench_history(
             OR sector=1000056320000000
             OR sector=1000056321000000
             OR sector=1000056322000000
+            OR sector=1000010087000000
             )
             AND dt BETWEEN ? AND ?
         """
@@ -259,7 +260,61 @@ async def bench_history(
         data.append(row)
 
     bench_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="history/bench.html", context={"bench_json": bench_json})
+    return templates.TemplateResponse(request=request, name="history/etf_bench.html", context={"bench_json": bench_json})
+
+
+@app.get("/lof/benchmark/history/")
+async def bench_lof_history(
+    request: Request,
+    username: Annotated[str, Depends(get_current_username)],
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    end: dt.date = dt.date.today(),
+):
+    with duckdb.connect(LOF_DB_URI, read_only=True) as conn:
+        query = """
+        SELECT DISTINCT code 
+        FROM bar1d 
+        WHERE
+            (
+            sector=1000043336000000 
+            OR sector=1000043337000000
+            )
+            AND dt BETWEEN ? AND ?
+        """
+        code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
+
+    data = []
+    for code in code_list:
+        stg = strategy.GridCCI(
+            init_cash=1e5,
+            cum_quantile=0.3,
+            rank_period=15,
+            rank_limit=0.3,
+            cci_threshold=0.0,
+            max_active_pos_len=25,
+            profit_limit=0.08,
+        )
+        replayer = DuckdbReplayer(start, end, code, LOF_DB_URI)
+        engine = BacktestEngine(replayer, stg)
+        engine.run()
+
+        (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
+        (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+        row = [
+            code,
+            round(stg.broker.profit_net(), 3),
+            round(stg.broker.analyzer.max_drawdown(), 3),
+            round(sharpe_annual, 3),
+            round(sharpe_volatility, 3),
+            round(sharpe_ratio, 3),
+            round(sortino_annual, 3),
+            round(sortino_volatility, 3),
+            round(sortino_ratio, 3),
+        ]
+        data.append(row)
+
+    bench_json = json.dumps(data)  # can handle nan automatically
+    return templates.TemplateResponse(request=request, name="history/lof_bench.html", context={"bench_json": bench_json})
 
 
 @app.get("/benchmark/realtime/")
