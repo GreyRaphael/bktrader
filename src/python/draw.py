@@ -210,7 +210,7 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list, title: str =
     return grid_chart
 
 
-def fetch_history_candles(code: int, start: dt.date, end: dt.date, uri: str = "bar1d.db") -> list[tuple]:
+def fetch_history_candles(code: int, start: dt.date, end: dt.date, uri: str) -> list[tuple]:
     query = """
     SELECT
         dt,
@@ -220,7 +220,7 @@ def fetch_history_candles(code: int, start: dt.date, end: dt.date, uri: str = "b
         ROUND(high * adjfactor / 1e4, 3) AS adj_high,
         volume,
     FROM
-        etf
+        bar1d
     WHERE 
         code = ? AND dt BETWEEN ? AND ?
     """
@@ -229,7 +229,7 @@ def fetch_history_candles(code: int, start: dt.date, end: dt.date, uri: str = "b
     return records
 
 
-def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "bar1d.db") -> list[tuple]:
+def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str) -> list[tuple]:
     query = """
     SELECT
         dt,
@@ -239,7 +239,7 @@ def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "ba
         ROUND(high * adjfactor / 1e4, 3) AS adj_high,
         volume,
     FROM
-        etf
+        bar1d
     WHERE 
         code = ? AND dt BETWEEN ? AND ?
     """
@@ -249,7 +249,7 @@ def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str = "ba
     return records + [record_today]
 
 
-def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str = "bar1d.db", title: str = None):
+def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str, title: str = None):
     from quote.history import DuckdbReplayer
     from engine import BacktestEngine
 
@@ -262,7 +262,7 @@ def backtest_history(code: int, start: dt.date, end: dt.date, strategy, uri: str
     return chart
 
 
-def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str = "bar1d.db", title: str = None):
+def backtest_realtime(code: int, start: dt.date, last_quote, strategy, uri: str, title: str = None):
     from quote.history import DuckdbReplayer
     from engine import TradeEngine
 

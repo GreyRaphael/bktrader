@@ -131,7 +131,7 @@ where
                 COALESCE(trades_count, 0) AS trades_count,
                 turnover
             FROM
-                etf
+                bar1d
             WHERE
                 preclose IS NOT NULL
                 AND code = ?
@@ -154,7 +154,7 @@ where
 
 fn main() -> Result<(), duckdb::Error> {
     // Define the database URI
-    let uri = "bar1d.db";
+    let uri = "etf.db";
     // Define the date range
     let start = "2024-11-20";
     let end = "2024-12-31";
