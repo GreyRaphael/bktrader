@@ -45,7 +45,7 @@ async def render_etf_history(
     request: Request,
     code: int,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
 ):
     stg = strategy.GridCCI(
@@ -87,7 +87,7 @@ async def render_lof_history(
     request: Request,
     code: int,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
 ):
     stg = strategy.GridCCI(
@@ -128,7 +128,7 @@ async def render_etf_realtime(
     request: Request,
     code: int,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
 ):
     stg = strategy.GridCCI(
         init_cash=1e5,
@@ -169,7 +169,7 @@ async def render_lof_realtime(
     request: Request,
     code: int,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
 ):
     stg = strategy.GridCCI(
         init_cash=1e5,
@@ -208,7 +208,7 @@ async def render_lof_realtime(
 async def bench_etf_history(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
 ):
     with duckdb.connect(ETF_DB_URI, read_only=True) as conn:
@@ -267,7 +267,7 @@ async def bench_etf_history(
 async def bench_lof_history(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
 ):
     with duckdb.connect(LOF_DB_URI, read_only=True) as conn:
@@ -321,7 +321,7 @@ async def bench_lof_history(
 async def bench_etf_realtime(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
 ):
     # download real time quotes
     quoter = EastEtfQuote(ETF_DB_URI)
@@ -368,7 +368,7 @@ async def bench_etf_realtime(
 async def bench_lof_realtime(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
 ):
     # download real time quotes
     quoter = EastLofQuote(LOF_DB_URI)
@@ -414,7 +414,7 @@ async def bench_lof_realtime(
 async def today_etf_available(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
 ):
     # download real time quotes
     quoter = EastEtfQuote(ETF_DB_URI)
@@ -465,7 +465,7 @@ async def today_etf_available(
 async def today_lof_available(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
 ):
     # download real time quotes
     quoter = EastLofQuote(LOF_DB_URI)
