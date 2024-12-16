@@ -12,7 +12,7 @@ import duckdb
 
 from bktrader import strategy
 from draw import backtest_history, backtest_realtime
-from quote.realtime import XueQiuQuote, EastEtfQuote
+from quote.realtime import XueQiuQuote, EastEtfQuote, EastLofQuote
 from quote.history import DuckdbReplayer
 from engine import BacktestEngine, TradeEngine
 
@@ -317,8 +317,8 @@ async def bench_lof_history(
     return templates.TemplateResponse(request=request, name="history/lof_bench.html", context={"bench_json": bench_json})
 
 
-@app.get("/benchmark/realtime/")
-async def bench_realtime(
+@app.get("/etf/benchmark/realtime/")
+async def bench_etf_realtime(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
@@ -361,7 +361,53 @@ async def bench_realtime(
         data.append(row)
 
     bench_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="realtime/bench.html", context={"bench_json": bench_json})
+    return templates.TemplateResponse(request=request, name="realtime/etf_bench.html", context={"bench_json": bench_json})
+
+
+@app.get("/lof/benchmark/realtime/")
+async def bench_realtime(
+    request: Request,
+    username: Annotated[str, Depends(get_current_username)],
+    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 1),
+):
+    # download real time quotes
+    quoter = EastLofQuote(LOF_DB_URI)
+    quoter.update()
+
+    data = []
+    for code in quoter.latest_bars.keys():  # aviable code in eastmoney
+        last_quote = quoter.get_quote(code)
+        stg = strategy.GridCCI(
+            init_cash=1e5,
+            cum_quantile=0.3,
+            rank_period=15,
+            rank_limit=0.3,
+            cci_threshold=0.0,
+            max_active_pos_len=25,
+            profit_limit=0.08,
+        )
+
+        replayer = DuckdbReplayer(start, dt.date.today(), code, LOF_DB_URI)
+        engine = TradeEngine(replayer, last_quote, stg)
+        engine.run()
+
+        (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
+        (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+        row = [
+            code,
+            round(stg.broker.profit_net(), 3),
+            round(stg.broker.analyzer.max_drawdown(), 3),
+            round(sharpe_annual, 3),
+            round(sharpe_volatility, 3),
+            round(sharpe_ratio, 3),
+            round(sortino_annual, 3),
+            round(sortino_volatility, 3),
+            round(sortino_ratio, 3),
+        ]
+        data.append(row)
+
+    bench_json = json.dumps(data)  # can handle nan automatically
+    return templates.TemplateResponse(request=request, name="realtime/lof_bench.html", context={"bench_json": bench_json})
 
 
 @app.get("/")
