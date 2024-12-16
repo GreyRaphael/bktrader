@@ -23,7 +23,7 @@ def predicted_close_ratio(update_time: dt.datetime):
     return time_ratio
 
 
-class EastQuote:
+class EastEtfQuote:
     """
     get quotes of all etf
     source: http://quote.eastmoney.com/center/gridlist.html#fund_etf
@@ -99,7 +99,7 @@ class EastQuote:
 
     def get_quote(self, code: int) -> datatype.Bar:
         with duckdb.connect(self.uri, read_only=True) as conn:
-            query = "SELECT ROUND(close/1e4, 3), adjfactor FROM etf WHERE code=? ORDER BY dt DESC LIMIT 1"
+            query = "SELECT ROUND(close/1e4, 3), adjfactor FROM bar1d WHERE code=? ORDER BY dt DESC LIMIT 1"
             duck_last_close, factor = conn.execute(query, [code]).fetchone()
         code, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.latest_bars[code]
         adjfactor = factor if math.isclose(duck_last_close, preclose) else duck_last_close / preclose * factor
@@ -117,7 +117,7 @@ class EastQuote:
         )
 
 
-class EastSingleQuote:
+class EastSingleEtfQuote:
     """
     get quote of single stock or etf
     not recommended bad than XueQiuQuote
@@ -178,7 +178,7 @@ class XueQiuQuote:
 
     def get_quote(self, code: int) -> datatype.Bar:
         with duckdb.connect(self.uri, read_only=True) as conn:
-            query = "SELECT ROUND(close/1e4, 3), adjfactor FROM etf WHERE code=? ORDER BY dt DESC LIMIT 1"
+            query = "SELECT ROUND(close/1e4, 3), adjfactor FROM bar1d WHERE code=? ORDER BY dt DESC LIMIT 1"
             duck_last_close, factor = conn.execute(query, [code]).fetchone()
 
         url_params = {
@@ -209,11 +209,11 @@ class XueQiuQuote:
 
 
 if __name__ == "__main__":
-    east_quoter = EastQuote(uri="bar1d.db")
+    east_quoter = EastEtfQuote(uri="etf.db")
     east_quoter.update()
     print(east_quoter.get_quote(513650))
     print(east_quoter.get_quote(159659))
 
-    xueqiu_quoter = XueQiuQuote(uri="bar1d.db")
+    xueqiu_quoter = XueQiuQuote(uri="etf.db")
     print(xueqiu_quoter.get_quote(513650))
     print(xueqiu_quoter.get_quote(159659))

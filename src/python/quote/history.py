@@ -3,7 +3,7 @@ from bktrader import datatype
 
 
 class DuckdbReplayer:
-    def __init__(self, start: dt.date, end: dt.date, symbol: int, uri: str = "bar1d.db"):
+    def __init__(self, start: dt.date, end: dt.date, symbol: int, uri: str):
         # Try importing duckdb when needed.
         try:
             import duckdb
@@ -26,7 +26,7 @@ class DuckdbReplayer:
             COALESCE(trades_count, 0) as trades_count,
             turnover,
         FROM
-            etf
+            bar1d
         WHERE
             preclose IS NOT NULL
             AND code=?
@@ -59,7 +59,7 @@ class DuckdbReplayer:
 
 
 class PolarsReplayer:
-    def __init__(self, start: dt.date, end: dt.date, symbol: int, uri: str = "bar1d.ipc"):
+    def __init__(self, start: dt.date, end: dt.date, symbol: int, uri: str):
         # Try importing polars when needed.
         try:
             import polars as pl
@@ -117,7 +117,7 @@ class PolarsReplayer:
 
 if __name__ == "__main__":
     # # DuckdbReplayer
-    # duckdb_replayer = DuckdbReplayer(start=dt.date(2010, 1, 1), end=dt.date(2024, 11, 30), symbol=510050, uri="bar1d.db")
+    # duckdb_replayer = DuckdbReplayer(start=dt.date(2010, 1, 1), end=dt.date(2024, 11, 30), symbol=510050, uri="etf.db")
     # start_time = dt.datetime.now()
     # for bar in duckdb_replayer:
     #     print(bar)
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     # print(f"cost {time_elapsed:.2f}s")
 
     # test PolarsReplayer
-    duckdb_replayer = PolarsReplayer(start=dt.date(2010, 1, 1), end=dt.date(2024, 11, 30), symbol=510050, uri="bar1d.ipc")
+    duckdb_replayer = PolarsReplayer(start=dt.date(2010, 1, 1), end=dt.date(2024, 11, 30), symbol=510050, uri="etf.ipc")
     start_time = dt.datetime.now()
     for bar in duckdb_replayer:
         print(bar)
