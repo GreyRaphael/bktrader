@@ -47,6 +47,7 @@ async def render_etf_history(
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
+    profit: int = 15,
 ):
     stg = strategy.GridCCI(
         init_cash=1e5,
@@ -55,8 +56,7 @@ async def render_etf_history(
         rank_limit=0.3,
         cci_threshold=0.0,
         max_active_pos_len=25,
-        profit_limit=0.15,
-        # profit_limit=0.08,
+        profit_limit=profit / 1e2,
     )
     quoter = XueQiuQuote(ETF_DB_URI)
     quoter.get_quote(code)
@@ -89,6 +89,7 @@ async def render_lof_history(
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
+    profit: int = 8,
 ):
     stg = strategy.GridCCI(
         init_cash=1e5,
@@ -97,7 +98,7 @@ async def render_lof_history(
         rank_limit=0.3,
         cci_threshold=0.0,
         max_active_pos_len=25,
-        profit_limit=0.08,
+        profit_limit=profit / 1e2,
     )
     quoter = XueQiuQuote(LOF_DB_URI)
     quoter.get_quote(code)
@@ -129,6 +130,7 @@ async def render_etf_realtime(
     code: int,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
+    profit: int = 15,
 ):
     stg = strategy.GridCCI(
         init_cash=1e5,
@@ -137,8 +139,7 @@ async def render_etf_realtime(
         rank_limit=0.3,
         cci_threshold=0.0,
         max_active_pos_len=25,
-        profit_limit=0.15,
-        # profit_limit=0.08,
+        profit_limit=profit / 1e2,
     )
     quoter = XueQiuQuote(ETF_DB_URI)
     last_quote = quoter.get_quote(code)
@@ -170,6 +171,7 @@ async def render_lof_realtime(
     code: int,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
+    profit: int = 8,
 ):
     stg = strategy.GridCCI(
         init_cash=1e5,
@@ -178,7 +180,7 @@ async def render_lof_realtime(
         rank_limit=0.3,
         cci_threshold=0.0,
         max_active_pos_len=25,
-        profit_limit=0.08,
+        profit_limit=profit / 1e2,
     )
     quoter = XueQiuQuote(LOF_DB_URI)
     last_quote = quoter.get_quote(code)
@@ -210,6 +212,7 @@ async def bench_etf_history(
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
+    profit: int = 15,
 ):
     with duckdb.connect(ETF_DB_URI, read_only=True) as conn:
         query = """
@@ -237,8 +240,7 @@ async def bench_etf_history(
             rank_limit=0.3,
             cci_threshold=0.0,
             max_active_pos_len=25,
-            profit_limit=0.15,
-            # profit_limit=0.08,
+            profit_limit=profit / 1e2,
         )
         replayer = DuckdbReplayer(start, end, code, ETF_DB_URI)
         engine = BacktestEngine(replayer, stg)
@@ -269,6 +271,7 @@ async def bench_lof_history(
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
+    profit: int = 8,
 ):
     with duckdb.connect(LOF_DB_URI, read_only=True) as conn:
         query = """
@@ -292,7 +295,7 @@ async def bench_lof_history(
             rank_limit=0.3,
             cci_threshold=0.0,
             max_active_pos_len=25,
-            profit_limit=0.08,
+            profit_limit=profit / 1e2,
         )
         replayer = DuckdbReplayer(start, end, code, LOF_DB_URI)
         engine = BacktestEngine(replayer, stg)
@@ -322,6 +325,7 @@ async def bench_etf_realtime(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
+    profit: int = 15,
 ):
     # download real time quotes
     quoter = EastEtfQuote(ETF_DB_URI)
@@ -337,8 +341,7 @@ async def bench_etf_realtime(
             rank_limit=0.3,
             cci_threshold=0.0,
             max_active_pos_len=25,
-            profit_limit=0.15,
-            # profit_limit=0.08,
+            profit_limit=profit / 1e2,
         )
 
         replayer = DuckdbReplayer(start, dt.date.today(), code, ETF_DB_URI)
@@ -369,6 +372,7 @@ async def bench_lof_realtime(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
+    profit: int = 8,
 ):
     # download real time quotes
     quoter = EastLofQuote(LOF_DB_URI)
@@ -384,7 +388,7 @@ async def bench_lof_realtime(
             rank_limit=0.3,
             cci_threshold=0.0,
             max_active_pos_len=25,
-            profit_limit=0.08,
+            profit_limit=profit / 1e2,
         )
 
         replayer = DuckdbReplayer(start, dt.date.today(), code, LOF_DB_URI)
@@ -415,6 +419,7 @@ async def today_etf_available(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
+    profit: int = 15,
 ):
     # download real time quotes
     quoter = EastEtfQuote(ETF_DB_URI)
@@ -430,8 +435,7 @@ async def today_etf_available(
             rank_limit=0.3,
             cci_threshold=0.0,
             max_active_pos_len=25,
-            profit_limit=0.15,
-            # profit_limit=0.08,
+            profit_limit=profit / 1e2,
         )
 
         replayer = DuckdbReplayer(start, dt.date.today(), code, ETF_DB_URI)
@@ -466,6 +470,7 @@ async def today_lof_available(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
+    profit: int = 8,
 ):
     # download real time quotes
     quoter = EastLofQuote(LOF_DB_URI)
@@ -481,7 +486,7 @@ async def today_lof_available(
             rank_limit=0.3,
             cci_threshold=0.0,
             max_active_pos_len=25,
-            profit_limit=0.08,
+            profit_limit=profit / 1e2,
         )
 
         replayer = DuckdbReplayer(start, dt.date.today(), code, LOF_DB_URI)
