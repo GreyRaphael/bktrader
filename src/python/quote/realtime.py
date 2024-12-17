@@ -266,9 +266,9 @@ class XueQiuQuote:
         self.client = httpx.Client(
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0",
-                "Cookie": "xq_a_token=220b0abef0fac476d076c9f7a3938b7edac35f48;",
             }
         )
+        self.client.get("https://xueqiu.com/?md5__1038=QqGxcDnDyiitnD05o4+r=iwFq7qiIiDCmfeD")  # update cookie
         self.quote = {}
 
     def get_quote(self, code: int) -> datatype.Bar:
