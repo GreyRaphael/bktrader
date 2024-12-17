@@ -40,6 +40,15 @@ def get_current_username(credentials: Annotated[HTTPBasicCredentials, Depends(se
     return credentials.username
 
 
+def query_info(code: int, uri: str) -> tuple:
+    with duckdb.connect(uri, read_only=True) as conn:
+        record = conn.execute("SELECT name,mer,cer FROM info WHERE code = ?", [code]).fetchone()
+    if record is None:
+        return None, None, None
+    else:
+        return record[0], record[1], record[2]
+
+
 @app.get("/etf/history/{code}")
 async def render_etf_history(
     request: Request,
@@ -58,9 +67,8 @@ async def render_etf_history(
         max_active_pos_len=25,
         profit_limit=profit / 1e2,
     )
-    quoter = XueQiuQuote(ETF_DB_URI)
-    quoter.get_quote(code)
-    chart = backtest_history(code, start, end, stg, ETF_DB_URI, title=f'{code} {quoter.quote["name"]}')
+    name, mer, cer = query_info(code, ETF_DB_URI)
+    chart = backtest_history(code, start, end, stg, ETF_DB_URI, title=f"{code} {name}")
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
@@ -77,6 +85,8 @@ async def render_etf_history(
             "sortino_annual": round(sortino_annual, 3),
             "sortino_volatility": round(sortino_volatility, 3),
             "sortino_ratio": round(sortino_ratio, 3),
+            "mer": mer,
+            "cer": cer,
             "candles": chart.render_embed(),
         },
     )
@@ -100,9 +110,8 @@ async def render_lof_history(
         max_active_pos_len=25,
         profit_limit=profit / 1e2,
     )
-    quoter = XueQiuQuote(LOF_DB_URI)
-    quoter.get_quote(code)
-    chart = backtest_history(code, start, end, stg, LOF_DB_URI, title=f'{code} {quoter.quote["name"]}')
+    name, mer, cer = query_info(code, LOF_DB_URI)
+    chart = backtest_history(code, start, end, stg, LOF_DB_URI, title=f"{code} {name}")
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
@@ -119,6 +128,8 @@ async def render_lof_history(
             "sortino_annual": round(sortino_annual, 3),
             "sortino_volatility": round(sortino_volatility, 3),
             "sortino_ratio": round(sortino_ratio, 3),
+            "mer": mer,
+            "cer": cer,
             "candles": chart.render_embed(),
         },
     )
@@ -141,9 +152,10 @@ async def render_etf_realtime(
         max_active_pos_len=25,
         profit_limit=profit / 1e2,
     )
+    name, mer, cer = query_info(code, ETF_DB_URI)
     quoter = XueQiuQuote(ETF_DB_URI)
     last_quote = quoter.get_quote(code)
-    chart = backtest_realtime(code, start, last_quote, stg, ETF_DB_URI, title=f'{code} {quoter.quote["name"]}')
+    chart = backtest_realtime(code, start, last_quote, stg, ETF_DB_URI, title=f"{code} {name}")
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
@@ -160,6 +172,8 @@ async def render_etf_realtime(
             "sortino_annual": round(sortino_annual, 3),
             "sortino_volatility": round(sortino_volatility, 3),
             "sortino_ratio": round(sortino_ratio, 3),
+            "mer": mer,
+            "cer": cer,
             "candles": chart.render_embed(),
         },
     )
@@ -182,9 +196,10 @@ async def render_lof_realtime(
         max_active_pos_len=25,
         profit_limit=profit / 1e2,
     )
+    name, mer, cer = query_info(code, LOF_DB_URI)
     quoter = XueQiuQuote(LOF_DB_URI)
     last_quote = quoter.get_quote(code)
-    chart = backtest_realtime(code, start, last_quote, stg, LOF_DB_URI, title=f'{code} {quoter.quote["name"]}')
+    chart = backtest_realtime(code, start, last_quote, stg, LOF_DB_URI, title=f"{code} {name}")
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
@@ -201,6 +216,8 @@ async def render_lof_realtime(
             "sortino_annual": round(sortino_annual, 3),
             "sortino_volatility": round(sortino_volatility, 3),
             "sortino_ratio": round(sortino_ratio, 3),
+            "mer": mer,
+            "cer": cer,
             "candles": chart.render_embed(),
         },
     )
@@ -248,8 +265,12 @@ async def bench_etf_history(
 
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+        name, mer, cer = query_info(code, ETF_DB_URI)
         row = [
             code,
+            name,
+            mer,
+            cer,
             round(stg.broker.profit_net(), 3),
             round(stg.broker.analyzer.max_drawdown(), 3),
             round(sharpe_annual, 3),
@@ -303,8 +324,12 @@ async def bench_lof_history(
 
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+        name, mer, cer = query_info(code, LOF_DB_URI)
         row = [
             code,
+            name,
+            mer,
+            cer,
             round(stg.broker.profit_net(), 3),
             round(stg.broker.analyzer.max_drawdown(), 3),
             round(sharpe_annual, 3),
@@ -350,8 +375,12 @@ async def bench_etf_realtime(
 
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+        name, mer, cer = query_info(code, ETF_DB_URI)
         row = [
             code,
+            name,
+            mer,
+            cer,
             round(stg.broker.profit_net(), 3),
             round(stg.broker.analyzer.max_drawdown(), 3),
             round(sharpe_annual, 3),
@@ -397,8 +426,12 @@ async def bench_lof_realtime(
 
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+        name, mer, cer = query_info(code, LOF_DB_URI)
         row = [
             code,
+            name,
+            mer,
+            cer,
             round(stg.broker.profit_net(), 3),
             round(stg.broker.analyzer.max_drawdown(), 3),
             round(sharpe_annual, 3),
@@ -446,8 +479,12 @@ async def today_etf_available(
         if last_position:
             (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
             (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+            name, mer, cer = query_info(code, ETF_DB_URI)
             row = [
                 code,
+                name,
+                mer,
+                cer,
                 round(stg.broker.profit_net(), 3),
                 round(stg.broker.analyzer.max_drawdown(), 3),
                 round(sharpe_annual, 3),
@@ -497,8 +534,12 @@ async def today_lof_available(
         if last_position:
             (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
             (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+            name, mer, cer = query_info(code, LOF_DB_URI)
             row = [
                 code,
+                name,
+                mer,
+                cer,
                 round(stg.broker.profit_net(), 3),
                 round(stg.broker.analyzer.max_drawdown(), 3),
                 round(sharpe_annual, 3),

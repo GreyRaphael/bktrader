@@ -15,6 +15,9 @@
             <thead>
                 <tr>
                     <th>code</th>
+                    <th>name</th>
+                    <th>mer</th>
+                    <th>cer</th>
                     <th>portfolio_profit</th>
                     <th>max_drawdown</th>
                     <th>sharpe_annual</th>
@@ -44,6 +47,9 @@
                         return `<a href="/etf/realtime/${encodeURIComponent(data)}" target="_blank">${data}</a>`;
                     }
                 },
+                { title: 'name' },
+                { title: 'mer' },
+                { title: 'cer' },
                 { title: 'portfolio_profit' },
                 { title: 'max_drawdown' },
                 { title: 'sharpe_annual.' },
