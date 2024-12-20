@@ -155,6 +155,7 @@ async def render_etf_realtime(
     name, mer, cer = query_info(code, ETF_DB_URI)
     quoter = XueQiuQuote(ETF_DB_URI)
     last_quote = quoter.get_quote(code)
+    discount = round((quoter.quote["current"] / quoter.quote["iopv"] - 1) * 100, 3)
     chart = backtest_realtime(code, start, last_quote, stg, ETF_DB_URI, title=f"{code} {name}")
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
@@ -174,6 +175,7 @@ async def render_etf_realtime(
             "sortino_ratio": round(sortino_ratio, 3),
             "mer": mer,
             "cer": cer,
+            "discount": discount,
             "candles": chart.render_embed(),
         },
     )
