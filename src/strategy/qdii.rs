@@ -17,7 +17,7 @@ pub struct GridCCI {
     ranker: RollingRank,
     rank_limit: f64,
     entry_amount: f64,
-    max_pos_num: usize,
+    // max_pos_num: usize,
     available_pos_num: usize,
     profit_limit: f64,
     loss_limit: f64,
@@ -55,8 +55,9 @@ impl QuoteHandler<Bar> for GridCCI {
         if self.available_pos_num > 0 {
             // println!("dt={}, cci={}, quantile_val={}, rank={}", bar.dt, cci_val, quantile_val, cci_rank);
             if (vol_tail / vol_head < 1.0) && (cci_val < f64::min(self.cci_threshold, quantile_val)) && (cci_rank < self.rank_limit) {
-                let multiplier = 1.1_f64.powi((self.max_pos_num - self.available_pos_num) as i32);
-                let entry_size = (self.entry_amount * multiplier / vwap / 100.0).floor() * 100.0;
+                // let multiplier = 1.1_f64.powi((self.max_pos_num - self.available_pos_num) as i32);
+                // let entry_size = (self.entry_amount * multiplier / vwap / 100.0).floor() * 100.0;
+                let entry_size = (self.entry_amount / vwap / 100.0).floor() * 100.0;
                 self.broker.entry(bar, vwap, entry_size, Some(self.loss_limit), Some(self.profit_limit));
                 self.available_pos_num -= 1;
             }
@@ -90,7 +91,7 @@ impl GridCCI {
             ranker: RollingRank::new(rank_period),
             rank_limit,
             entry_amount: origin_amount,
-            max_pos_num: max_active_pos_len,
+            // max_pos_num: max_active_pos_len,
             available_pos_num: max_active_pos_len,
             profit_limit,
             loss_limit,
