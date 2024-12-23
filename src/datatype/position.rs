@@ -32,6 +32,8 @@ pub struct Position {
     pub pnl: f64, // gross pnl without considering commissions
     #[pyo3(get)]
     pub fees: f64,
+    #[pyo3(get)]
+    pub holding_days: u32,
 }
 
 #[pymethods]
@@ -50,6 +52,7 @@ impl Position {
             volume,
             pnl: 0.0,
             fees: 0.0,
+            holding_days: 0,
         }
     }
 

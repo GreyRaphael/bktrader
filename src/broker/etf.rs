@@ -109,6 +109,15 @@ impl EtfBroker {
         self.portfolio_value = self.cash + self.active_positions_sum() * bar.close;
         self.analyzer.update(self.portfolio_value);
         self.update_active_pnl(bar);
+        self.positions.iter_mut().for_each(|pos| {
+            if pos.entry_dt != bar.dt && pos.exit_dt.is_none() {
+                pos.holding_days += 1;
+            }
+        });
+    }
+
+    pub fn avg_hold_days(&self) -> f64 {
+        self.positions.iter().map(|pos| pos.holding_days as f64).sum::<f64>() / self.positions.len() as f64
     }
 
     pub fn update_active_pnl(&mut self, bar: &Bar) {
