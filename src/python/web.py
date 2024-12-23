@@ -76,6 +76,7 @@ async def render_etf_history(
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+    avg_hold_days = round(stg.broker.avg_hold_days(), 3)
 
     return templates.TemplateResponse(
         request=request,
@@ -91,6 +92,7 @@ async def render_etf_history(
             "sortino_ratio": round(sortino_ratio, 3),
             "mer": mer,
             "cer": cer,
+            "avg_hold_days": avg_hold_days,
             "candles": chart.render_embed(),
         },
     )
