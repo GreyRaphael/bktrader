@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, status, Request
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 import duckdb
 
 from bktrader import strategy
@@ -24,6 +25,9 @@ LOF_DB_URI = os.getenv("LOF_DB_URI")
 app = FastAPI()
 security = HTTPBasic()
 templates = Jinja2Templates(directory="templates")
+
+# add static js or css
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 def get_current_username(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
