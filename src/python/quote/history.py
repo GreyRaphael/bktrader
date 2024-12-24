@@ -50,7 +50,7 @@ class DuckdbReplayer:
                 high=record[4],
                 low=record[5],
                 close=record[6],
-                netvalue=record[7],
+                netvalue=record[7] or 0,
                 volume=record[8],
                 amount=record[9],
                 trades_count=record[10],
