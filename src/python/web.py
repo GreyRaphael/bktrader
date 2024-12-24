@@ -294,7 +294,7 @@ async def bench_etf_history(
         data.append(row)
 
     bench_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="history/etf_bench.html", context={"bench_json": bench_json})
+    return templates.TemplateResponse(request=request, name="history/etf_summary.html", context={"bench_json": bench_json})
 
 
 @app.get("/lof/history/")
@@ -352,7 +352,7 @@ async def bench_lof_history(
         data.append(row)
 
     bench_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="history/lof_bench.html", context={"bench_json": bench_json})
+    return templates.TemplateResponse(request=request, name="history/lof_summary.html", context={"bench_json": bench_json})
 
 
 @app.get("/etf/realtime/")
@@ -408,7 +408,7 @@ async def etf_available(
             data.append(row)
 
     available_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="etf_index.html", context={"available_json": available_json})
+    return templates.TemplateResponse(request=request, name="realtime/etf_summary.html", context={"available_json": available_json})
 
 
 @app.get("/lof/realtime/")
@@ -464,4 +464,4 @@ async def lof_available(
             data.append(row)
 
     available_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="lof_index.html", context={"available_json": available_json})
+    return templates.TemplateResponse(request=request, name="realtime/lof_summary.html", context={"available_json": available_json})
