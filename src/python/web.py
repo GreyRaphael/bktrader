@@ -378,109 +378,6 @@ async def bench_etf_realtime(
         engine = TradeEngine(replayer, last_quote, stg)
         engine.run()
 
-        (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
-        (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-        name, mer, cer = query_info(code, ETF_DB_URI)
-        row = [
-            code,
-            name,
-            mer,
-            cer,
-            round(stg.broker.profit_net(), 3),
-            round(stg.broker.analyzer.max_drawdown(), 3),
-            round(sharpe_annual, 3),
-            round(sharpe_volatility, 3),
-            round(sharpe_ratio, 3),
-            round(sortino_annual, 3),
-            round(sortino_volatility, 3),
-            round(sortino_ratio, 3),
-        ]
-        data.append(row)
-
-    bench_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="realtime/etf_bench.html", context={"bench_json": bench_json})
-
-
-@app.get("/lof/realtime/")
-async def bench_lof_realtime(
-    request: Request,
-    username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
-    profit: int = 8,
-    xt: LOFType = "qdii",
-):
-    # download real time quotes
-    quoter = EastLofQuote(LOF_DB_URI, xt)
-    quoter.update()
-
-    data = []
-    for code in quoter.latest_bars.keys():  # aviable code in eastmoney
-        last_quote = quoter.get_quote(code)
-        stg = strategy.GridCCI(
-            init_cash=1e5,
-            cum_quantile=0.3,
-            rank_period=15,
-            rank_limit=0.3,
-            cci_threshold=0.0,
-            max_active_pos_len=25,
-            profit_limit=profit / 1e2,
-        )
-
-        replayer = DuckdbReplayer(start, dt.date.today(), code, LOF_DB_URI)
-        engine = TradeEngine(replayer, last_quote, stg)
-        engine.run()
-
-        (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
-        (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-        name, mer, cer = query_info(code, LOF_DB_URI)
-        row = [
-            code,
-            name,
-            mer,
-            cer,
-            round(stg.broker.profit_net(), 3),
-            round(stg.broker.analyzer.max_drawdown(), 3),
-            round(sharpe_annual, 3),
-            round(sharpe_volatility, 3),
-            round(sharpe_ratio, 3),
-            round(sortino_annual, 3),
-            round(sortino_volatility, 3),
-            round(sortino_ratio, 3),
-        ]
-        data.append(row)
-
-    bench_json = json.dumps(data)  # can handle nan automatically
-    return templates.TemplateResponse(request=request, name="realtime/lof_bench.html", context={"bench_json": bench_json})
-
-
-@app.get("/etf")
-async def today_etf_available(
-    request: Request,
-    username: Annotated[str, Depends(get_current_username)],
-    start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
-    profit: int = 15,
-):
-    # download real time quotes
-    quoter = EastEtfQuote(ETF_DB_URI)
-    quoter.update()
-
-    data = []
-    for code in quoter.latest_bars.keys():  # aviable code in eastmoney
-        last_quote = quoter.get_quote(code)
-        stg = strategy.GridCCI(
-            init_cash=1e5,
-            cum_quantile=0.3,
-            rank_period=15,
-            rank_limit=0.3,
-            cci_threshold=0.0,
-            max_active_pos_len=25,
-            profit_limit=profit / 1e2,
-        )
-
-        replayer = DuckdbReplayer(start, dt.date.today(), code, ETF_DB_URI)
-        engine = TradeEngine(replayer, last_quote, stg)
-        engine.run()
-
         last_position = stg.broker.position_last()
         if last_position:
             (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
@@ -508,15 +405,16 @@ async def today_etf_available(
     return templates.TemplateResponse(request=request, name="etf_index.html", context={"available_json": available_json})
 
 
-@app.get("/lof")
-async def today_lof_available(
+@app.get("/lof/realtime/")
+async def bench_lof_realtime(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     profit: int = 8,
+    xt: LOFType = "qdii",
 ):
     # download real time quotes
-    quoter = EastLofQuote(LOF_DB_URI)
+    quoter = EastLofQuote(LOF_DB_URI, xt)
     quoter.update()
 
     data = []
