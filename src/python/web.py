@@ -251,8 +251,8 @@ async def bench_etf_history(
         condition = "sector=1000010087000000"
     elif ETFType.bond == xt:
         condition = "sector=1000009166000000"
-    elif ETFType.all == xt:
-        condition = "sector>0"
+    elif ETFType.stock == xt:
+        condition = "sector=1000009712000000 OR sector=1000009713000000 OR sector=1000009714000000 OR sector=1000009715000000 OR sector=1000009716000000"
     else:
         # default is qdii
         condition = "sector=918 OR sector=1000056319000000 OR sector=1000056320000000 OR sector=1000056321000000 OR sector=1000056322000000"
@@ -312,8 +312,6 @@ async def bench_lof_history(
         condition = "sector=1000043336000000"
     elif LOFType.bond == xt:
         condition = "sector=1000043335000000"
-    elif LOFType.all == xt:
-        condition = "sector>0"
     else:
         # default is qdii
         condition = "sector=1000043337000000"
