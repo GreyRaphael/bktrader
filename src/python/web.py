@@ -238,7 +238,7 @@ class ETFType(str, enum.Enum):
     bond = "bond"
 
 
-@app.get("/etf/benchmark/history/")
+@app.get("/etf/history/")
 async def bench_etf_history(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
@@ -303,7 +303,7 @@ class LOFType(str, enum.Enum):
     bond = "bond"
 
 
-@app.get("/lof/benchmark/history/")
+@app.get("/lof/history/")
 async def bench_lof_history(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
@@ -361,7 +361,7 @@ async def bench_lof_history(
     return templates.TemplateResponse(request=request, name="history/lof_bench.html", context={"bench_json": bench_json})
 
 
-@app.get("/etf/benchmark/realtime/")
+@app.get("/etf/realtime/")
 async def bench_etf_realtime(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
@@ -412,7 +412,7 @@ async def bench_etf_realtime(
     return templates.TemplateResponse(request=request, name="realtime/etf_bench.html", context={"bench_json": bench_json})
 
 
-@app.get("/lof/benchmark/realtime/")
+@app.get("/lof/realtime/")
 async def bench_lof_realtime(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
