@@ -72,7 +72,7 @@ def draw_trade_markers(positions: list):
                 "show": True,
                 "position": "top",
                 "color": "auto",
-                "distance": (item[6] + 1) * 13,  # solve text overlapping
+                "distance": item[6] * 13 + 6,  # solve text overlapping
                 "fontSize": 10,
                 "formatter": str(item[2]),
             },
