@@ -3,6 +3,7 @@ import datetime as dt
 import httpx
 import duckdb
 from bktrader import datatype
+from fundtype import ETFType, LOFType
 
 
 def predicted_close_ratio(update_time: dt.datetime):
@@ -29,8 +30,9 @@ class EastEtfQuote:
     source: http://quote.eastmoney.com/center/gridlist.html#fund_etf
     """
 
-    def __init__(self, uri: str):
+    def __init__(self, uri: str, xt: ETFType = "qdii"):
         self.uri = uri
+        self.fund_type = xt
         self.client = httpx.Client(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"})
         self.mapping = {
             "f12": "code",
@@ -60,6 +62,11 @@ class EastEtfQuote:
         # MK0023: foreign
         # MK0024: gold
         # MK0827: commodity
+        if self.fund_type == ETFType.commodity:
+            market_type = "b:MK0024,b:MK0827"
+        else:
+            market_type = "b:MK0023"  # default qdii
+
         url_params = {
             "pn": 1,  # page number
             "pz": 2000,  # page size > etf total size
@@ -71,7 +78,7 @@ class EastEtfQuote:
             "dect": 1,
             "wbp2u": "|0|0|0|web",
             "fid": "f5",  # sort by volume
-            "fs": "b:MK0023,b:MK0827",  # market type: b:MK0021,b:MK0022,b:MK0023,b:MK0024,b:MK0827
+            "fs": market_type,  # market type: b:MK0021,b:MK0022,b:MK0023,b:MK0024,b:MK0827
             "fields": ",".join(self.mapping.keys()),
             "_": int(dt.datetime.now().timestamp() * 1000),  # timestamp
         }
@@ -123,8 +130,9 @@ class EastLofQuote:
     source: http://quote.eastmoney.com/center/gridlist.html#fund_lof
     """
 
-    def __init__(self, uri: str):
+    def __init__(self, uri: str, xt: LOFType = "qdii"):
         self.uri = uri
+        self.fund_type = xt
         self.client = httpx.Client(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"})
         self.mapping = {
             "f12": "code",
@@ -152,6 +160,12 @@ class EastLofQuote:
         # MK0405: bond
         # MK0406: commodity
         # MK0407: QDII
+        if self.fund_type == LOFType.commodity:
+            market_type = "b:MK0406"
+        elif self.fund_type == LOFType.bond:
+            market_type = "b:MK0405"
+        else:
+            market_type = "b:MK0407"  # default qdii
         url_params = {
             "pn": 1,  # page number
             "pz": 1000,  # page size > etf total size
@@ -163,7 +177,7 @@ class EastLofQuote:
             "dect": 1,
             "wbp2u": "|0|0|0|web",
             "fid": "f5",  # sort by volume
-            "fs": "b:MK0406,b:MK0407",  # market type: b:MK0404,b:MK0405,b:MK0406,b:MK0407
+            "fs": market_type,  # market type: b:MK0404,b:MK0405,b:MK0406,b:MK0407
             "fields": ",".join(self.mapping.keys()),
             "_": int(dt.datetime.now().timestamp() * 1000),  # timestamp
         }
