@@ -1,6 +1,7 @@
 import os
 import datetime as dt
 import json
+import enum
 
 from dotenv import load_dotenv
 import secrets
@@ -231,6 +232,12 @@ async def render_lof_realtime(
     )
 
 
+class ETFType(str, enum.Enum):
+    qdii = "qdii"
+    commodity = "commodity"
+    bond = "bond"
+
+
 @app.get("/etf/benchmark/history/")
 async def bench_etf_history(
     request: Request,
@@ -238,22 +245,18 @@ async def bench_etf_history(
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
     profit: int = 15,
+    xt: ETFType = "qdii",
 ):
+    if ETFType.commodity == xt:
+        condition = "sector=1000010087000000"
+    elif ETFType.bond == xt:
+        condition = "sector=1000009166000000"
+    else:
+        # default is qdii
+        condition = "sector=918 OR sector=1000056319000000 OR sector=1000056320000000 OR sector=1000056321000000 OR sector=1000056322000000"
+
     with duckdb.connect(ETF_DB_URI, read_only=True) as conn:
-        query = """
-        SELECT DISTINCT code 
-        FROM bar1d 
-        WHERE
-            (
-            sector=918 
-            OR sector=1000056319000000
-            OR sector=1000056320000000
-            OR sector=1000056321000000
-            OR sector=1000056322000000
-            OR sector=1000010087000000
-            )
-            AND dt BETWEEN ? AND ?
-        """
+        query = f"SELECT DISTINCT code FROM bar1d WHERE {condition} AND dt BETWEEN ? AND ?"
         code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
 
     data = []
@@ -294,6 +297,12 @@ async def bench_etf_history(
     return templates.TemplateResponse(request=request, name="history/etf_bench.html", context={"bench_json": bench_json})
 
 
+class LOFType(str, enum.Enum):
+    qdii = "qdii"
+    commodity = "commodity"  # alternative investment
+    bond = "bond"
+
+
 @app.get("/lof/benchmark/history/")
 async def bench_lof_history(
     request: Request,
@@ -301,18 +310,17 @@ async def bench_lof_history(
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     end: dt.date = dt.date.today(),
     profit: int = 8,
+    xt: LOFType = "qdii",
 ):
+    if LOFType.commodity == xt:
+        condition = "sector=1000043336000000"
+    elif LOFType.bond == xt:
+        condition = "sector=1000043335000000"
+    else:
+        # default is qdii
+        condition = "sector=1000043337000000"
     with duckdb.connect(LOF_DB_URI, read_only=True) as conn:
-        query = """
-        SELECT DISTINCT code 
-        FROM bar1d 
-        WHERE
-            (
-            sector=1000043336000000 
-            OR sector=1000043337000000
-            )
-            AND dt BETWEEN ? AND ?
-        """
+        query = f"SELECT DISTINCT code FROM bar1d WHERE {condition} AND dt BETWEEN ? AND ?"
         code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
 
     data = []
