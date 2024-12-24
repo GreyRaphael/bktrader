@@ -3,7 +3,7 @@ import datetime as dt
 import httpx
 import duckdb
 from bktrader import datatype
-from fundtype import ETFType, LOFType
+from . import fundtype
 
 
 def predicted_close_ratio(update_time: dt.datetime):
@@ -30,7 +30,7 @@ class EastEtfQuote:
     source: http://quote.eastmoney.com/center/gridlist.html#fund_etf
     """
 
-    def __init__(self, uri: str, xt: ETFType = "qdii"):
+    def __init__(self, uri: str, xt: fundtype.ETFType = "qdii"):
         self.uri = uri
         self.fund_type = xt
         self.client = httpx.Client(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"})
@@ -62,7 +62,7 @@ class EastEtfQuote:
         # MK0023: foreign
         # MK0024: gold
         # MK0827: commodity
-        if self.fund_type == ETFType.commodity:
+        if self.fund_type == fundtype.ETFType.commodity:
             market_type = "b:MK0024,b:MK0827"
         else:
             market_type = "b:MK0023"  # default qdii
@@ -130,7 +130,7 @@ class EastLofQuote:
     source: http://quote.eastmoney.com/center/gridlist.html#fund_lof
     """
 
-    def __init__(self, uri: str, xt: LOFType = "qdii"):
+    def __init__(self, uri: str, xt: fundtype.LOFType = "qdii"):
         self.uri = uri
         self.fund_type = xt
         self.client = httpx.Client(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"})
@@ -160,9 +160,9 @@ class EastLofQuote:
         # MK0405: bond
         # MK0406: commodity
         # MK0407: QDII
-        if self.fund_type == LOFType.commodity:
+        if self.fund_type == fundtype.LOFType.commodity:
             market_type = "b:MK0406"
-        elif self.fund_type == LOFType.bond:
+        elif self.fund_type == fundtype.LOFType.bond:
             market_type = "b:MK0405"
         else:
             market_type = "b:MK0407"  # default qdii

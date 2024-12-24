@@ -1,7 +1,6 @@
 import os
 import datetime as dt
 import json
-import enum
 
 from dotenv import load_dotenv
 import secrets
@@ -17,6 +16,7 @@ from draw import backtest_history, backtest_realtime
 from quote.realtime import XueQiuQuote, EastEtfQuote, EastLofQuote
 from quote.history import DuckdbReplayer
 from engine import BacktestEngine, TradeEngine
+from quote.fundtype import ETFType, LOFType
 
 # Load environment variables from the .env file (if present)
 load_dotenv()
@@ -232,12 +232,6 @@ async def render_lof_realtime(
     )
 
 
-class ETFType(str, enum.Enum):
-    qdii = "qdii"
-    commodity = "commodity"
-    bond = "bond"
-
-
 @app.get("/etf/history/")
 async def bench_etf_history(
     request: Request,
@@ -295,12 +289,6 @@ async def bench_etf_history(
 
     bench_json = json.dumps(data)  # can handle nan automatically
     return templates.TemplateResponse(request=request, name="history/etf_bench.html", context={"bench_json": bench_json})
-
-
-class LOFType(str, enum.Enum):
-    qdii = "qdii"
-    commodity = "commodity"  # alternative investment
-    bond = "bond"
 
 
 @app.get("/lof/history/")
@@ -367,9 +355,10 @@ async def bench_etf_realtime(
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     profit: int = 15,
+    xt: ETFType = "qdii",
 ):
     # download real time quotes
-    quoter = EastEtfQuote(ETF_DB_URI)
+    quoter = EastEtfQuote(ETF_DB_URI, xt)
     quoter.update()
 
     data = []
@@ -418,9 +407,10 @@ async def bench_lof_realtime(
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
     profit: int = 8,
+    xt: LOFType = "qdii",
 ):
     # download real time quotes
-    quoter = EastLofQuote(LOF_DB_URI)
+    quoter = EastLofQuote(LOF_DB_URI, xt)
     quoter.update()
 
     data = []
