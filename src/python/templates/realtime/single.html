@@ -50,13 +50,13 @@
                 <td>{{max_drawdown}}</td>
                 <td>{{sharpe_annual}}</td>
                 <td>{{sharpe_volatility}}</td>
-                <td>{{sharpe_ratio}}</td>
+                <td style="color: blue;">{{sharpe_ratio}}</td>
                 <td>{{sortino_annual}}</td>
                 <td>{{sortino_volatility}}</td>
-                <td>{{sortino_ratio}}</td>
+                <td style="color: blue;">{{sortino_ratio}}</td>
                 <td>{{avg_hold_days}}</td>
-                <td style="color: red;">{{mer}}</td>
-                <td style="color: red;">{{cer}}</td>
+                <td>{{mer}}</td>
+                <td>{{cer}}</td>
                 <td style="color: {% if discount > 0 %}red{% else %}green{% endif %};">{{ discount }}</td>
             </tr>
         </tbody>
