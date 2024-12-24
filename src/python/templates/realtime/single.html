@@ -38,6 +38,7 @@
                 <th>sortino_annual</th>
                 <th>sortino_volatility</th>
                 <th>sortino_ratio</th>
+                <th>avg_hold_days</th>
                 <th>mer/yr</th>
                 <th>cer/yr</th>
                 <th>discount(%)</th>
@@ -53,9 +54,10 @@
                 <td>{{sortino_annual}}</td>
                 <td>{{sortino_volatility}}</td>
                 <td>{{sortino_ratio}}</td>
+                <td>{{avg_hold_days}}</td>
                 <td style="color: red;">{{mer}}</td>
                 <td style="color: red;">{{cer}}</td>
-                <td style="color: red;">{{discount}}</td>
+                <td style="color: {% if discount > 0 %}red{% else %}green{% endif %};">{{ discount }}</td>
             </tr>
         </tbody>
     </table>

@@ -122,6 +122,7 @@ async def render_lof_history(
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+    avg_hold_days = round(stg.broker.avg_hold_days(), 3)
 
     return templates.TemplateResponse(
         request=request,
@@ -137,6 +138,7 @@ async def render_lof_history(
             "sortino_ratio": round(sortino_ratio, 3),
             "mer": mer,
             "cer": cer,
+            "avg_hold_days": avg_hold_days,
             "candles": chart.render_embed(),
         },
     )
@@ -167,6 +169,7 @@ async def render_etf_realtime(
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+    avg_hold_days = round(stg.broker.avg_hold_days(), 3)
 
     return templates.TemplateResponse(
         request=request,
@@ -182,6 +185,7 @@ async def render_etf_realtime(
             "sortino_ratio": round(sortino_ratio, 3),
             "mer": mer,
             "cer": cer,
+            "avg_hold_days": avg_hold_days,
             "discount": discount,
             "candles": chart.render_embed(),
         },
@@ -212,6 +216,7 @@ async def render_lof_realtime(
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
     (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
+    avg_hold_days = round(stg.broker.avg_hold_days(), 3)
 
     return templates.TemplateResponse(
         request=request,
@@ -227,6 +232,7 @@ async def render_lof_realtime(
             "sortino_ratio": round(sortino_ratio, 3),
             "mer": mer,
             "cer": cer,
+            "avg_hold_days": avg_hold_days,
             "candles": chart.render_embed(),
         },
     )
@@ -350,7 +356,7 @@ async def bench_lof_history(
 
 
 @app.get("/etf/realtime/")
-async def bench_etf_realtime(
+async def etf_available(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
@@ -406,7 +412,7 @@ async def bench_etf_realtime(
 
 
 @app.get("/lof/realtime/")
-async def bench_lof_realtime(
+async def lof_available(
     request: Request,
     username: Annotated[str, Depends(get_current_username)],
     start: dt.date = dt.date.today().replace(year=dt.date.today().year - 2),
