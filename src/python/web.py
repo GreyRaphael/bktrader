@@ -233,6 +233,7 @@ async def render_lof_realtime(
             "mer": mer,
             "cer": cer,
             "avg_hold_days": avg_hold_days,
+            "discount": float("nan"),
             "candles": chart.render_embed(),
         },
     )
