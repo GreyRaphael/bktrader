@@ -109,7 +109,7 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list, title: str =
     """tuple fields: date,open,close,low,high,volume"""
     # preprocess quotes
     dates = [row[0] for row in quotes]
-    oclh = [row[1:-1] for row in quotes]
+    oclhp = [row[1:-1] for row in quotes]
     vol_bar_items = [
         {
             "value": row[-1],
@@ -149,7 +149,7 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list, title: str =
         .add_xaxis(xaxis_data=dates)
         .add_yaxis(
             "Candles",
-            y_axis=oclh,
+            y_axis=oclhp,
             bar_width="80%",
             itemstyle_opts=opts.ItemStyleOpts(
                 color="red",
@@ -186,7 +186,9 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list, title: str =
                         } else if (args.seriesName === 'Volumes') {
                             return `${args.seriesName}: ${args.value}`;
                         } else if (args.seriesName === 'Candles') {
-                            return `date: ${args.name}<br/>Open: ${args.value[1]}<br/>Close: ${args.value[2]}<br/>Low: ${args.value[3]}<br/>High: ${args.value[4]}`;
+                            var pct = args.value[5];
+                            var pctColor = pct > 0 ? 'red' : 'green';
+                            return `date: ${args.name}<br/>open: ${args.value[1]}<br/>close: ${args.value[2]}<br/>low: ${args.value[3]}<br/>high: ${args.value[4]}<br/>pct: <span style="color: ${pctColor};">${pct}%</span>`;
                         }
                     }
                 """),
@@ -218,6 +220,7 @@ def fetch_history_candles(code: int, start: dt.date, end: dt.date, uri: str) -> 
         ROUND(close * adjfactor / 1e4, 3) AS adj_close,
         ROUND(low * adjfactor / 1e4, 3) AS adj_low,
         ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+        ROUND(100 * (close / preclose - 1), 2) AS pct,
         volume,
     FROM
         bar1d
@@ -237,6 +240,7 @@ def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str) -> l
         ROUND(close * adjfactor / 1e4, 3) AS adj_close,
         ROUND(low * adjfactor / 1e4, 3) AS adj_low,
         ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+        ROUND(100 * (close / preclose - 1), 2) AS pct,
         volume,
     FROM
         bar1d
@@ -245,7 +249,15 @@ def fetch_realtime_candles(code: int, start: dt.date, last_quote, uri: str) -> l
     """
     with duckdb.connect(uri, read_only=True) as conn:
         records = conn.execute(query, [code, start, dt.date.today()]).fetchall()
-    record_today = (dt.date(1970, 1, 1) + dt.timedelta(days=last_quote.dt), last_quote.open, last_quote.close, last_quote.low, last_quote.high, last_quote.volume)
+    record_today = (
+        dt.date(1970, 1, 1) + dt.timedelta(days=last_quote.dt),
+        last_quote.open,
+        last_quote.close,
+        last_quote.low,
+        last_quote.high,
+        round(100 * (last_quote.close / last_quote.preclose - 1), 2),
+        last_quote.volume,
+    )
     return records + [record_today]
 
 
