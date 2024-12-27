@@ -105,10 +105,14 @@ class EastEtfQuote:
             )
 
     def get_quote(self, code: int) -> datatype.Bar:
+        code, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.latest_bars[code]
         with duckdb.connect(self.uri, read_only=True) as conn:
             query = "SELECT ROUND(close/1e4, 3), adjfactor FROM bar1d WHERE code=? ORDER BY dt DESC LIMIT 1"
-            duck_last_close, factor = conn.execute(query, [code]).fetchone()
-        code, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.latest_bars[code]
+            record = conn.execute(query, [code]).fetchone()
+            if record:
+                duck_last_close, factor = record
+            else:  # is None
+                duck_last_close, factor = preclose, 1
         adjfactor = factor if math.isclose(duck_last_close, preclose) else duck_last_close / preclose * factor
         # print("prev", factor, "now", adjfactor)
         return datatype.Bar(
@@ -207,10 +211,14 @@ class EastLofQuote:
             )
 
     def get_quote(self, code: int) -> datatype.Bar:
+        code, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.latest_bars[code]
         with duckdb.connect(self.uri, read_only=True) as conn:
             query = "SELECT ROUND(close/1e4, 3), adjfactor FROM bar1d WHERE code=? ORDER BY dt DESC LIMIT 1"
-            duck_last_close, factor = conn.execute(query, [code]).fetchone()
-        code, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.latest_bars[code]
+            record = conn.execute(query, [code]).fetchone()
+            if record:
+                duck_last_close, factor = record
+            else:  # is None
+                duck_last_close, factor = preclose, 1
         adjfactor = factor if math.isclose(duck_last_close, preclose) else duck_last_close / preclose * factor
         # print("prev", factor, "now", adjfactor)
         return datatype.Bar(
