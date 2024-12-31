@@ -1,6 +1,7 @@
 use bktrader::datatype::quote::Bar;
 use duckdb::{params, Connection};
 use rayon::prelude::*;
+use std::marker::PhantomData;
 
 // Define the mock Tick struct
 #[derive(Debug)]
@@ -87,31 +88,59 @@ impl FromRow for Tick {
     }
 }
 
+// Define an enum to encapsulate all strategies// Define an enum to encapsulate all strategies
+enum StrategyEnum {
+    A(StrategyA),
+    B(StrategyB),
+    // Add more strategies here as needed
+}
+
+// Implement the Strategy trait for StrategyEnum for Bar
+impl Strategy<Bar> for StrategyEnum {
+    fn on_quote(&mut self, quote: &Bar) {
+        match self {
+            StrategyEnum::A(strategy_a) => strategy_a.on_quote(quote),
+            StrategyEnum::B(strategy_b) => strategy_b.on_quote(quote),
+            // Handle additional strategies here
+        }
+    }
+}
+
+// Implement the Strategy trait for StrategyEnum for Tick
+impl Strategy<Tick> for StrategyEnum {
+    fn on_quote(&mut self, quote: &Tick) {
+        match self {
+            StrategyEnum::A(strategy_a) => strategy_a.on_quote(quote),
+            StrategyEnum::B(strategy_b) => strategy_b.on_quote(quote),
+            // Handle additional strategies here
+        }
+    }
+}
+
 // Generic Engine struct
 struct Engine<T> {
     uri: String,
-    strategies: Vec<Box<dyn Strategy<T>>>,
+    strategies: StrategyEnum,
     code: u32,
     start: String,
     end: String,
+    _marker: PhantomData<T>,
 }
 
 impl<T> Engine<T>
 where
     T: FromRow,
+    StrategyEnum: Strategy<T>,
 {
-    fn new(uri: &str, code: u32, start: &str, end: &str) -> Self {
+    fn new(uri: &str, code: u32, start: &str, end: &str, stg: StrategyEnum) -> Self {
         Self {
             uri: uri.into(),
-            strategies: Vec::with_capacity(8),
+            strategies: stg,
             code,
             start: start.into(),
             end: end.into(),
+            _marker: PhantomData,
         }
-    }
-
-    fn add_strategy(&mut self, stg: Box<dyn Strategy<T>>) {
-        self.strategies.push(stg);
     }
 
     fn run(&mut self) -> Result<(), duckdb::Error> {
@@ -143,9 +172,7 @@ where
 
         for row in rows {
             let data = row?;
-            for stg in self.strategies.iter_mut() {
-                stg.on_quote(&data);
-            }
+            self.strategies.on_quote(&data);
         }
 
         Ok(())
@@ -164,11 +191,17 @@ fn main() -> Result<(), duckdb::Error> {
     // use rayon to parallelize the processing
     // as code number is greater than strategy number, so parallelize the code list
     code_list.par_iter().for_each(|&code| {
-        let mut engine = Engine::<Bar>::new(uri, code, start, end);
-        engine.add_strategy(Box::new(StrategyA));
-        engine.add_strategy(Box::new(StrategyB));
+        let stg = StrategyEnum::A(StrategyA);
+        let mut engine = Engine::<Bar>::new(uri, code, start, end, stg);
         if let Err(e) = engine.run() {
             eprintln!("Error processing Bar code {}: {:?}", code, e);
+        }
+    });
+    code_list.par_iter().for_each(|&code| {
+        let stg = StrategyEnum::B(StrategyB);
+        let mut engine = Engine::<Tick>::new(uri, code, start, end, stg);
+        if let Err(e) = engine.run() {
+            eprintln!("Error processing Tick code {}: {:?}", code, e);
         }
     });
 
