@@ -83,6 +83,7 @@ async def render_etf_history(
         request=request,
         name="history/single.html",
         context={
+            "code": code,
             "portfolio_profit": round(stg.broker.profit_net(), 3),
             "max_drawdown": round(stg.broker.analyzer.max_drawdown(), 3),
             "sharpe_annual": round(sharpe_annual, 3),
@@ -128,6 +129,7 @@ async def render_lof_history(
         request=request,
         name="history/single.html",
         context={
+            "code": code,
             "portfolio_profit": round(stg.broker.profit_net(), 3),
             "max_drawdown": round(stg.broker.analyzer.max_drawdown(), 3),
             "sharpe_annual": round(sharpe_annual, 3),
@@ -175,6 +177,7 @@ async def render_etf_realtime(
         request=request,
         name="realtime/single.html",
         context={
+            "code": code,
             "portfolio_profit": round(stg.broker.profit_net(), 3),
             "max_drawdown": round(stg.broker.analyzer.max_drawdown(), 3),
             "sharpe_annual": round(sharpe_annual, 3),
@@ -222,6 +225,7 @@ async def render_lof_realtime(
         request=request,
         name="realtime/single.html",
         context={
+            "code": code,
             "portfolio_profit": round(stg.broker.profit_net(), 3),
             "max_drawdown": round(stg.broker.analyzer.max_drawdown(), 3),
             "sharpe_annual": round(sharpe_annual, 3),
