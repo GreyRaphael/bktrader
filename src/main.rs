@@ -120,6 +120,7 @@ impl Strategy<Tick> for StrategyEnum {
 // Generic Engine struct
 struct Engine<T> {
     uri: String,
+    sql: String,
     strategies: StrategyEnum,
     code: u32,
     start: String,
@@ -132,9 +133,10 @@ where
     T: FromRow,
     StrategyEnum: Strategy<T>,
 {
-    fn new(uri: &str, code: u32, start: &str, end: &str, stg: StrategyEnum) -> Self {
+    fn new(uri: &str, sql: &str, code: u32, start: &str, end: &str, stg: StrategyEnum) -> Self {
         Self {
             uri: uri.into(),
+            sql: sql.into(),
             strategies: stg,
             code,
             start: start.into(),
@@ -145,29 +147,7 @@ where
 
     fn run(&mut self) -> Result<(), duckdb::Error> {
         let conn = Connection::open(&self.uri)?;
-        let query = r#"
-            SELECT
-                code,
-                date_diff('day', DATE '1970-01-01', dt) AS days_since_epoch,
-                ROUND(preclose * adjfactor / 1e4, 3) AS adj_preclose,
-                ROUND(open * adjfactor / 1e4, 3) AS adj_open,
-                ROUND(high * adjfactor / 1e4, 3) AS adj_high,
-                ROUND(low * adjfactor / 1e4, 3) AS adj_low,
-                ROUND(close * adjfactor / 1e4, 3) AS adj_close,
-                ROUND(netvalue * adjfactor / 1e4, 3) AS adj_netvalue,
-                volume,
-                ROUND(amount * adjfactor / 1e4, 3) AS adj_amount,
-                COALESCE(trades_count, 0) AS trades_count,
-                turnover
-            FROM
-                bar1d
-            WHERE
-                preclose IS NOT NULL
-                AND code = ?
-                AND dt BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
-        "#;
-
-        let mut stmt = conn.prepare(&query)?;
+        let mut stmt = conn.prepare(&self.sql)?;
         let rows = stmt.query_map(params![self.code, self.start, self.end], |row| T::from_row(row))?;
 
         for row in rows {
@@ -190,20 +170,42 @@ fn main() -> Result<(), duckdb::Error> {
     let code_list: Vec<u32> = vec![510050, 513500, 159659];
     // use rayon to parallelize the processing
     // as code number is greater than strategy number, so parallelize the code list
+    let bar_sql = r#"
+        SELECT
+            code,
+            date_diff('day', DATE '1970-01-01', dt) AS days_since_epoch,
+            ROUND(preclose * adjfactor / 1e4, 3) AS adj_preclose,
+            ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+            ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+            ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+            ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+            ROUND(netvalue * adjfactor / 1e4, 3) AS adj_netvalue,
+            volume,
+            ROUND(amount * adjfactor / 1e4, 3) AS adj_amount,
+            COALESCE(trades_count, 0) AS trades_count,
+            turnover
+        FROM
+            bar1d
+        WHERE
+            preclose IS NOT NULL
+            AND code = ?
+            AND dt BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
+    "#;
+
     code_list.par_iter().for_each(|&code| {
         let stg = StrategyEnum::A(StrategyA);
-        let mut engine = Engine::<Bar>::new(uri, code, start, end, stg);
+        let mut engine = Engine::<Bar>::new(uri, bar_sql, code, start, end, stg);
         if let Err(e) = engine.run() {
             eprintln!("Error processing Bar code {}: {:?}", code, e);
         }
     });
-    code_list.par_iter().for_each(|&code| {
-        let stg = StrategyEnum::B(StrategyB);
-        let mut engine = Engine::<Tick>::new(uri, code, start, end, stg);
-        if let Err(e) = engine.run() {
-            eprintln!("Error processing Tick code {}: {:?}", code, e);
-        }
-    });
+    // code_list.par_iter().for_each(|&code| {
+    //     let stg = StrategyEnum::B(StrategyB);
+    //     let mut engine = Engine::<Tick>::new(uri, code, start, end, stg);
+    //     if let Err(e) = engine.run() {
+    //         eprintln!("Error processing Tick code {}: {:?}", code, e);
+    //     }
+    // });
 
     Ok(())
 }
