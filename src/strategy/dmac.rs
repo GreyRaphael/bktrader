@@ -34,6 +34,8 @@ impl QuoteHandler<Bar> for DMAStrategy {
                 }
             }
         }
+
+        self.broker.update_portfolio_value(bar);
     }
 }
 
@@ -51,9 +53,8 @@ impl DMAStrategy {
         }
     }
 
-    pub fn on_bar(&mut self, bar: &Bar) {
+    pub fn on_update(&mut self, bar: &Bar) {
         self.on_quote(bar);
-        self.broker.update_portfolio_value(bar);
         println!("portfolio={} at {:?}", self.broker.portfolio_value, bar);
     }
 }

@@ -100,7 +100,7 @@ impl GridCCI {
         }
     }
 
-    pub fn on_bar(&mut self, bar: &Bar) {
+    pub fn on_update(&mut self, bar: &Bar) {
         self.on_quote(bar);
         // self.broker.update_portfolio_value(bar);
     }

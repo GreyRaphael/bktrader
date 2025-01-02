@@ -87,6 +87,8 @@ impl QuoteHandler<Bar> for GridPercent {
                 self.ids[i] = Some(pos_id);
             }
         }
+
+        self.broker.update_portfolio_value(bar);
     }
 }
 
@@ -112,9 +114,8 @@ impl GridPercent {
         }
     }
 
-    pub fn on_bar(&mut self, bar: &Bar) {
+    pub fn on_update(&mut self, bar: &Bar) {
         self.on_quote(bar);
-        self.broker.update_portfolio_value(bar);
         // println!("portfolio={}, {:?}", self.broker.portfolio_value, bar);
     }
 }
@@ -196,6 +197,8 @@ impl QuoteHandler<Bar> for GridATR {
                 self.ids[i] = Some(pos_id);
             }
         }
+
+        self.broker.update_portfolio_value(bar);
     }
 }
 
@@ -222,9 +225,8 @@ impl GridATR {
         }
     }
 
-    pub fn on_bar(&mut self, bar: &Bar) {
+    pub fn on_update(&mut self, bar: &Bar) {
         self.on_quote(bar);
-        self.broker.update_portfolio_value(bar);
         // println!("portfolio={}, {:?}", self.broker.portfolio_value, bar);
     }
 }

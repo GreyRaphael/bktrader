@@ -5,7 +5,7 @@ class BacktestEngine:
 
     def run(self):
         for quote in self.replayer:
-            self.strategy.on_bar(quote)
+            self.strategy.on_update(quote)
 
 
 class TradeEngine:
@@ -16,8 +16,8 @@ class TradeEngine:
 
     def run(self):
         for quote in self.replayer:
-            self.strategy.on_bar(quote)
-        self.strategy.on_bar(self.last_quote)
+            self.strategy.on_update(quote)
+        self.strategy.on_update(self.last_quote)
 
 
 if __name__ == "__main__":
