@@ -88,56 +88,21 @@ impl FromRow for Tick {
     }
 }
 
-// Define an enum to encapsulate all strategies// Define an enum to encapsulate all strategies
-enum StrategyEnum {
-    A(StrategyA),
-    B(StrategyB),
-    // Add more strategies here as needed
-}
-
-// Implement the Strategy trait for StrategyEnum for Bar
-impl Strategy<Bar> for StrategyEnum {
-    fn on_quote(&mut self, quote: &Bar) {
-        match self {
-            StrategyEnum::A(strategy_a) => strategy_a.on_quote(quote),
-            StrategyEnum::B(strategy_b) => strategy_b.on_quote(quote),
-            // Handle additional strategies here
-        }
-    }
-}
-
-// Implement the Strategy trait for StrategyEnum for Tick
-impl Strategy<Tick> for StrategyEnum {
-    fn on_quote(&mut self, quote: &Tick) {
-        match self {
-            StrategyEnum::A(strategy_a) => strategy_a.on_quote(quote),
-            StrategyEnum::B(strategy_b) => strategy_b.on_quote(quote),
-            // Handle additional strategies here
-        }
-    }
-}
-
 // Generic Engine struct
 struct Engine<T> {
     uri: String,
     sql: String,
-    strategies: StrategyEnum,
     code: u32,
     start: String,
     end: String,
     _marker: PhantomData<T>,
 }
 
-impl<T> Engine<T>
-where
-    T: FromRow,
-    StrategyEnum: Strategy<T>,
-{
-    fn new(uri: &str, sql: &str, code: u32, start: &str, end: &str, stg: StrategyEnum) -> Self {
+impl<T: FromRow> Engine<T> {
+    fn new(uri: &str, sql: &str, code: u32, start: &str, end: &str) -> Self {
         Self {
             uri: uri.into(),
             sql: sql.into(),
-            strategies: stg,
             code,
             start: start.into(),
             end: end.into(),
@@ -145,14 +110,14 @@ where
         }
     }
 
-    fn run(&mut self) -> Result<(), duckdb::Error> {
+    fn run<S: Strategy<T>>(&mut self, stg: &mut S) -> Result<(), duckdb::Error> {
         let conn = Connection::open(&self.uri)?;
         let mut stmt = conn.prepare(&self.sql)?;
         let rows = stmt.query_map(params![self.code, self.start, self.end], |row| T::from_row(row))?;
 
         for row in rows {
             let data = row?;
-            self.strategies.on_quote(&data);
+            stg.on_quote(&data);
         }
 
         Ok(())
@@ -193,19 +158,35 @@ fn main() -> Result<(), duckdb::Error> {
     "#;
 
     code_list.par_iter().for_each(|&code| {
-        let stg = StrategyEnum::A(StrategyA);
-        let mut engine = Engine::<Bar>::new(uri, bar_sql, code, start, end, stg);
-        if let Err(e) = engine.run() {
+        let mut stga = StrategyA;
+        let mut engine = Engine::<Bar>::new(uri, bar_sql, code, start, end);
+        if let Err(e) = engine.run(&mut stga) {
             eprintln!("Error processing Bar code {}: {:?}", code, e);
         }
     });
-    // code_list.par_iter().for_each(|&code| {
-    //     let stg = StrategyEnum::B(StrategyB);
-    //     let mut engine = Engine::<Tick>::new(uri, code, start, end, stg);
-    //     if let Err(e) = engine.run() {
-    //         eprintln!("Error processing Tick code {}: {:?}", code, e);
-    //     }
-    // });
+
+    let tick_sql = r#"
+        SELECT
+            code,
+            ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+            ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+            ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+            ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+        FROM
+            tick
+        WHERE
+            preclose IS NOT NULL
+            AND code = ?
+            AND dt BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
+    "#;
+
+    code_list.par_iter().for_each(|&code| {
+        let mut stgb = StrategyB;
+        let mut engine = Engine::<Tick>::new(uri, tick_sql, code, start, end);
+        if let Err(e) = engine.run(&mut stgb) {
+            eprintln!("Error processing Tick code {}: {:?}", code, e);
+        }
+    });
 
     Ok(())
 }
