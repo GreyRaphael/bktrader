@@ -58,6 +58,64 @@ class DuckdbReplayer:
             )
 
 
+class DuckBatchReplayer:
+    def __init__(self, start: dt.date, end: dt.date, sectors: list[int], uri: str):
+        try:
+            import duckdb
+        except ImportError as e:
+            raise ImportError("Class A requires 'duckdb'. Please install with: pip install duckdb") from e
+
+        self.conn = duckdb.connect(uri, read_only=True)
+        placeholders = ", ".join(["?"] * len(sectors))
+        query = f"""SELECT
+            code,
+            date_diff('day', DATE '1970-01-01', dt) as days_since_epoch,
+            ROUND(preclose * adjfactor / 1e4, 3) AS adj_preclose,
+            ROUND(open * adjfactor / 1e4, 3) AS adj_open,
+            ROUND(high * adjfactor / 1e4, 3) AS adj_high,
+            ROUND(low * adjfactor / 1e4, 3) AS adj_low,
+            ROUND(close * adjfactor / 1e4, 3) AS adj_close,
+            ROUND(netvalue * adjfactor / 1e4, 3) AS adj_netvalue,
+            volume,
+            ROUND(amount * adjfactor / 1e4, 3) as adj_amount,
+            -- handle null trades_count
+            COALESCE(trades_count, 0) as trades_count,
+            turnover,
+        FROM
+            bar1d
+        WHERE
+            preclose IS NOT NULL
+            AND sector IN ({placeholders})
+            AND dt BETWEEN ? AND ?
+        ORDER BY
+            code ASC, dt ASC"""
+        self.conn.execute(query, [*sectors, start, end])
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> datatype.Bar:
+        record = self.conn.fetchone()
+        if record is None:
+            self.conn.close()
+            raise StopIteration
+        else:
+            return datatype.Bar(
+                code=record[0],
+                dt=record[1],
+                preclose=record[2],
+                open=record[3],
+                high=record[4],
+                low=record[5],
+                close=record[6],
+                netvalue=record[7] or 0,
+                volume=record[8],
+                amount=record[9],
+                trades_count=record[10],
+                turnover=record[11],
+            )
+
+
 class PolarsReplayer:
     def __init__(self, start: dt.date, end: dt.date, symbol: int, uri: str):
         # Try importing polars when needed.
