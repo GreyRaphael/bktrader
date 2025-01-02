@@ -14,7 +14,7 @@ import duckdb
 from bktrader import strategy
 from draw import backtest_history, backtest_realtime
 from quote.realtime import XueQiuQuote, EastEtfQuote, EastLofQuote
-from quote.history import DuckdbReplayer
+from quote.history import DuckdbReplayer, DuckBatchReplayer
 from engine import BacktestEngine, TradeEngine
 from quote.fundtype import ETFType, LOFType
 
@@ -52,6 +52,12 @@ def query_info(code: int, uri: str) -> tuple:
         return None, None, None
     else:
         return record[0], record[1], record[2]
+
+
+def query_info_all(uri: str) -> dict:
+    with duckdb.connect(uri, read_only=True) as conn:
+        records = conn.execute("SELECT code,name,mer,cer FROM info").fetchall()
+    return {code: (name, mer, cer) for code, name, mer, cer in records}
 
 
 @app.get("/etf/history/{code}")
@@ -253,22 +259,22 @@ async def bench_etf_history(
     xt: ETFType = "qdii",
 ):
     if ETFType.commodity == xt:
-        condition = "sector=1000010087000000"
+        sectors = [1000010087000000]
     elif ETFType.bond == xt:
-        condition = "sector=1000009166000000"
+        sectors = [1000009166000000]
     elif ETFType.stock == xt:
-        condition = "sector=1000009712000000 OR sector=1000009713000000 OR sector=1000009714000000 OR sector=1000009715000000 OR sector=1000009716000000"
+        sectors = [1000009712000000, 1000009713000000, 1000009714000000, 1000009715000000, 1000009716000000]
     else:
         # default is qdii
-        condition = "sector=918 OR sector=1000056319000000 OR sector=1000056320000000 OR sector=1000056321000000 OR sector=1000056322000000"
+        sectors = [918, 1000056319000000, 1000056320000000, 1000056321000000, 1000056322000000]
 
+    placeholders = ", ".join(["?"] * len(sectors))
     with duckdb.connect(ETF_DB_URI, read_only=True) as conn:
-        query = f"SELECT DISTINCT code FROM bar1d WHERE {condition} AND dt BETWEEN ? AND ?"
-        code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
+        query = f"SELECT DISTINCT code FROM bar1d WHERE sector IN ({placeholders}) AND dt BETWEEN ? AND ?"
+        code_list = [code[0] for code in conn.execute(query, [*sectors, start, end]).fetchall()]
 
-    data = []
-    for code in code_list:
-        stg = strategy.GridCCI(
+    stgs = {
+        code: strategy.GridCCI(
             init_cash=1e5,
             cum_quantile=0.3,
             rank_period=15,
@@ -277,13 +283,20 @@ async def bench_etf_history(
             max_active_pos_len=25,
             profit_limit=profit / 1e2,
         )
-        replayer = DuckdbReplayer(start, end, code, ETF_DB_URI)
-        engine = BacktestEngine(replayer, stg)
-        engine.run()
+        for code in code_list
+    }
 
+    replayer = DuckBatchReplayer(start, end, sectors, ETF_DB_URI)
+    for quote in replayer:
+        stgs[quote.code].on_update(quote)
+
+    infos = query_info_all(ETF_DB_URI)
+    data = []
+    for code in stgs:
+        stg = stgs[code]
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-        name, mer, cer = query_info(code, ETF_DB_URI)
+        name, mer, cer = infos.get(code, (None, None, None))
         row = [
             code,
             name,
