@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 #[pyclass]
 pub struct GridCCI {
     #[pyo3(get)]
-    broker: EtfBroker,
+    pub broker: EtfBroker,
     cci: CCI,
     vol_differ: Container,
     quantiler: CumQuantile,
@@ -62,6 +62,8 @@ impl QuoteHandler<Bar> for GridCCI {
                 self.available_pos_num -= 1;
             }
         }
+
+        self.broker.update_portfolio_value(bar);
     }
 }
 
@@ -100,6 +102,6 @@ impl GridCCI {
 
     pub fn on_bar(&mut self, bar: &Bar) {
         self.on_quote(bar);
-        self.broker.update_portfolio_value(bar);
+        // self.broker.update_portfolio_value(bar);
     }
 }
