@@ -4,16 +4,18 @@ import duckdb
 
 
 def append_ipcs(ipc_path: str, db_uri: str):
-    conn = duckdb.connect(db_uri, read_only=False)
-    df_mapping = conn.execute("SELECT code,sector FROM bar1d WHERE dt=(SELECT MAX(dt) FROM bar1d)").pl()
-    df_new = (
-        pl.read_ipc(f"{ipc_path}/*.ipc")
-        .join(df_mapping, on="code", how="left")
-        .select("code", "dt", "preclose", "open", "high", "low", "close", "volume", "amount", "turnover", "netvalue", "trades_count", "adjfactor", "sector")
+    df_new = pl.read_ipc(
+        f"{ipc_path}/*.ipc",
+        columns=["code", "dt", "preclose", "open", "high", "low", "close", "volume", "amount", "turnover", "netvalue", "trades_count", "adjfactor"],
     )
-    conn.execute("INSERT INTO bar1d SELECT * FROM df_new")
-    conn.close()  # must close after save
-    print(f"append ipc to {db_uri}")
+    with duckdb.connect(db_uri, read_only=False) as con:
+        con.execute("INSERT INTO bar1d SELECT * FROM df_new")
+
+    print(f"append ipc to {db_uri}, sample:")
+
+    with duckdb.connect(db_uri, read_only=True) as con:
+        df_sample = con.execute("SELECT * FROM bar1d WHERE code=(SELECT MAX(code) FROM bar1d)").pl()
+        print(df_sample.tail(3))
 
 
 if __name__ == "__main__":
