@@ -66,7 +66,7 @@ class DuckBatchReplayer:
             raise ImportError("Class A requires 'duckdb'. Please install with: pip install duckdb") from e
 
         self.conn = duckdb.connect(uri, read_only=True)
-        placeholders = ", ".join(["?"] * len(sectors))
+        placeholders = ",".join([str(s) for s in sectors])
         query = f"""SELECT
             code,
             date_diff('day', DATE '1970-01-01', dt) as days_since_epoch,
@@ -89,7 +89,7 @@ class DuckBatchReplayer:
             AND dt BETWEEN ? AND ?
         ORDER BY
             code ASC, dt ASC"""
-        self.conn.execute(query, [*sectors, start, end])
+        self.conn.execute(query, [start, end])
 
     def __iter__(self):
         return self

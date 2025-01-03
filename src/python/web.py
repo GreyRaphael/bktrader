@@ -268,10 +268,10 @@ async def bench_etf_history(
         # default is qdii
         sectors = [918, 1000056319000000, 1000056320000000, 1000056321000000, 1000056322000000]
 
-    placeholders = ", ".join(["?"] * len(sectors))
+    placeholders = ",".join([str(s) for s in sectors])
     with duckdb.connect(ETF_DB_URI, read_only=True) as conn:
         query = f"SELECT DISTINCT code FROM bar1d WHERE sector IN ({placeholders}) AND dt BETWEEN ? AND ?"
-        code_list = [code[0] for code in conn.execute(query, [*sectors, start, end]).fetchall()]
+        code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
 
     stgs = {
         code: strategy.GridCCI(
@@ -333,10 +333,10 @@ async def bench_lof_history(
     else:
         # default is qdii+commodity
         sectors = [1000043337000000, 1000043336000000]
-    placeholders = ", ".join(["?"] * len(sectors))
+    placeholders = ",".join([str(s) for s in sectors])
     with duckdb.connect(LOF_DB_URI, read_only=True) as conn:
         query = f"SELECT DISTINCT code FROM bar1d WHERE sector IN ({placeholders}) AND dt BETWEEN ? AND ?"
-        code_list = [code[0] for code in conn.execute(query, [*sectors, start, end]).fetchall()]
+        code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
 
     stgs = {
         code: strategy.GridCCI(
