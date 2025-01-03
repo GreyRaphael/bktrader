@@ -64,6 +64,8 @@ class EastEtfQuote:
         # MK0827: commodity
         if self.fund_type == fundtype.ETFType.commodity:
             market_type = "b:MK0024,b:MK0827"
+        elif self.fund_type == fundtype.ETFType.stock:
+            market_type = "b:MK0021"  # default qdii
         else:
             market_type = "b:MK0023"  # default qdii
 
