@@ -436,11 +436,11 @@ async def lof_available(
     # download real time quotes
     quoter = EastLofQuote(LOF_DB_URI, xt)
     quoter.update()
+    latest_quotes = quoter.get_quotes()
+    code_list = quoter.latest_bars.keys()
 
-    data = []
-    for code in quoter.latest_bars.keys():  # aviable code in eastmoney
-        last_quote = quoter.get_quote(code)
-        stg = strategy.GridCCI(
+    stgs = {
+        code: strategy.GridCCI(
             init_cash=1e5,
             cum_quantile=0.3,
             rank_period=15,
@@ -449,11 +449,18 @@ async def lof_available(
             max_active_pos_len=25,
             profit_limit=profit / 1e2,
         )
+        for code in code_list
+    }
 
-        replayer = DuckdbReplayer(start, dt.date.today(), code, LOF_DB_URI)
-        engine = TradeEngine(replayer, last_quote, stg)
-        engine.run()
+    replayer = DuckBatchReplayer(start, dt.date.today(), code_list, LOF_DB_URI)
+    for quote in replayer:
+        stgs[quote.code].on_update(quote)
+    for quote in latest_quotes:
+        stgs[quote.code].on_update(quote)
 
+    data = []
+    for code in stgs:
+        stg = stgs[code]
         last_position = stg.broker.position_last()
         if last_position:
             (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)

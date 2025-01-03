@@ -170,7 +170,7 @@ class EastLofQuote:
         elif self.fund_type == fundtype.LOFType.bond:
             market_type = "b:MK0405"
         else:
-            market_type = "b:MK0407"  # default qdii
+            market_type = "b:MK0406,b:MK0407"  # default qdii+commodity
         url_params = {
             "pn": 1,  # page number
             "pz": 1000,  # page size > etf total size
@@ -211,28 +211,29 @@ class EastLofQuote:
                 predicted_today_amount,  # amount
             )
 
-    def get_quote(self, code: int) -> datatype.Bar:
-        code, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.latest_bars[code]
-        with duckdb.connect(self.uri, read_only=True) as conn:
-            query = "SELECT ROUND(close/1e4, 3), adjfactor FROM bar1d WHERE code=? ORDER BY dt DESC LIMIT 1"
-            record = conn.execute(query, [code]).fetchone()
-            if record:
-                duck_last_close, factor = record
-            else:  # is None
-                duck_last_close, factor = preclose, 1
-        adjfactor = factor if math.isclose(duck_last_close, preclose) else duck_last_close / preclose * factor
-        # print("prev", factor, "now", adjfactor)
-        return datatype.Bar(
-            code=code,
-            dt=dt,
-            preclose=round(preclose * adjfactor, 3),
-            open=round(open * adjfactor, 3),
-            high=round(high * adjfactor, 3),
-            low=round(low * adjfactor, 3),
-            close=round(last * adjfactor, 3),
-            volume=predicted_vol,
-            amount=round(predicted_amt * adjfactor, 3),
-        )
+    def get_quotes(self) -> list[datatype.Bar]:
+        placeholders = ",".join([str(code) for code in self.latest_bars.keys()])
+        with duckdb.connect(self.uri, read_only=True) as con:
+            records = con.execute(f"SELECT code, ROUND(close/1e4, 3), adjfactor FROM bar1d WHERE code IN ({placeholders}) AND dt = (SELECT MAX(dt) FROM bar1d)").fetchall()
+
+        bars = []
+        for code, duck_last_close, factor in records:
+            _, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.latest_bars[code]
+            adjfactor = factor if math.isclose(duck_last_close, preclose) else duck_last_close / preclose * factor
+            bars.append(
+                datatype.Bar(
+                    code=code,
+                    dt=dt,
+                    preclose=round(preclose * adjfactor, 3),
+                    open=round(open * adjfactor, 3),
+                    high=round(high * adjfactor, 3),
+                    low=round(low * adjfactor, 3),
+                    close=round(last * adjfactor, 3),
+                    volume=predicted_vol,
+                    amount=round(predicted_amt * adjfactor, 3),
+                )
+            )
+        return bars
 
 
 class EastSingleEtfQuote:
