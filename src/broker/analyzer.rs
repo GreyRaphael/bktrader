@@ -75,6 +75,10 @@ impl Analyzer {
     }
 
     pub fn sharpe_ratio(&self, risk_free_rate: f64) -> (f64, f64, f64) {
+        if self.equity_curve.len() < 2 {
+            return (f64::NAN, f64::NAN, f64::NAN); // or handle the error as appropriate
+        }
+
         // Step 1: Compute Daily Returns
         let mut daily_returns = Vec::with_capacity(self.equity_curve.len() - 1);
         for i in 1..self.equity_curve.len() {
@@ -109,6 +113,10 @@ impl Analyzer {
     }
 
     pub fn sortino_ratio(&self, risk_free_rate: f64, mar: f64) -> (f64, f64, f64) {
+        if self.equity_curve.len() < 2 {
+            return (f64::NAN, f64::NAN, f64::NAN); // or handle the error as appropriate
+        }
+
         // Step 1: Compute Daily Returns
         let mut daily_returns = Vec::with_capacity(self.equity_curve.len() - 1);
         for i in 1..self.equity_curve.len() {
