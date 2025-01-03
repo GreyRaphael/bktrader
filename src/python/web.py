@@ -17,11 +17,14 @@ from quote.realtime import XueQiuQuote, EastEtfQuote, EastLofQuote
 from quote.history import DuckdbReplayer, DuckBatchReplayer
 from engine import BacktestEngine, TradeEngine
 from quote.fundtype import ETFType, LOFType
+from quote import info
 
 # Load environment variables from the .env file (if present)
 load_dotenv()
 ETF_DB_URI = os.getenv("ETF_DB_URI")
 LOF_DB_URI = os.getenv("LOF_DB_URI")
+ETF_INFO_DICT = info.query_info_all(ETF_DB_URI)  # {code: (name, mer, cer)}
+LOF_INFO_DICT = info.query_info_all(LOF_DB_URI)
 
 app = FastAPI()
 security = HTTPBasic()
@@ -45,21 +48,6 @@ def get_current_username(credentials: Annotated[HTTPBasicCredentials, Depends(se
     return credentials.username
 
 
-def query_info(code: int, uri: str) -> tuple:
-    with duckdb.connect(uri, read_only=True) as conn:
-        record = conn.execute("SELECT name,mer,cer FROM info WHERE code = ?", [code]).fetchone()
-    if record is None:
-        return None, None, None
-    else:
-        return record[0], record[1], record[2]
-
-
-def query_info_all(uri: str) -> dict:
-    with duckdb.connect(uri, read_only=True) as conn:
-        records = conn.execute("SELECT code,name,mer,cer FROM info").fetchall()
-    return {code: (name, mer, cer) for code, name, mer, cer in records}
-
-
 @app.get("/etf/history/{code}")
 async def render_etf_history(
     request: Request,
@@ -78,7 +66,7 @@ async def render_etf_history(
         max_active_pos_len=25,
         profit_limit=profit / 1e2,
     )
-    name, mer, cer = query_info(code, ETF_DB_URI)
+    name, mer, cer = ETF_INFO_DICT.get(code, (None, None, None))
     chart = backtest_history(code, start, end, stg, ETF_DB_URI, title=f"{code} {name}")
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
@@ -124,7 +112,7 @@ async def render_lof_history(
         max_active_pos_len=25,
         profit_limit=profit / 1e2,
     )
-    name, mer, cer = query_info(code, LOF_DB_URI)
+    name, mer, cer = LOF_INFO_DICT.get(code, (None, None, None))
     chart = backtest_history(code, start, end, stg, LOF_DB_URI, title=f"{code} {name}")
 
     (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
@@ -169,7 +157,7 @@ async def render_etf_realtime(
         max_active_pos_len=25,
         profit_limit=profit / 1e2,
     )
-    name, mer, cer = query_info(code, ETF_DB_URI)
+    name, mer, cer = ETF_INFO_DICT.get(code, (None, None, None))
     quoter = XueQiuQuote(ETF_DB_URI)
     last_quote = quoter.get_quote(code)
     discount = round((quoter.quote["current"] / quoter.quote["iopv"] - 1) * 100, 3)
@@ -218,7 +206,7 @@ async def render_lof_realtime(
         max_active_pos_len=25,
         profit_limit=profit / 1e2,
     )
-    name, mer, cer = query_info(code, LOF_DB_URI)
+    name, mer, cer = LOF_INFO_DICT.get(code, (None, None, None))
     quoter = XueQiuQuote(LOF_DB_URI)
     last_quote = quoter.get_quote(code)
     chart = backtest_realtime(code, start, last_quote, stg, LOF_DB_URI, title=f"{code} {name}")
@@ -290,13 +278,12 @@ async def bench_etf_history(
     for quote in replayer:
         stgs[quote.code].on_update(quote)
 
-    infos = query_info_all(ETF_DB_URI)
     data = []
     for code in stgs:
         stg = stgs[code]
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-        name, mer, cer = infos.get(code, (None, None, None))
+        name, mer, cer = ETF_INFO_DICT.get(code, (None, None, None))
         row = [
             code,
             name,
@@ -355,13 +342,12 @@ async def bench_lof_history(
     for quote in replayer:
         stgs[quote.code].on_update(quote)
 
-    infos = query_info_all(LOF_DB_URI)
     data = []
     for code in stgs:
         stg = stgs[code]
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-        name, mer, cer = infos.get(code, (None, None, None))
+        name, mer, cer = LOF_INFO_DICT.get(code, (None, None, None))
         row = [
             code,
             name,
@@ -415,7 +401,7 @@ async def etf_available(
         if last_position:
             (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
             (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-            name, mer, cer = query_info(code, ETF_DB_URI)
+            name, mer, cer = ETF_INFO_DICT.get(code, (None, None, None))
             row = [
                 code,
                 name,
@@ -471,7 +457,7 @@ async def lof_available(
         if last_position:
             (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
             (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-            name, mer, cer = query_info(code, LOF_DB_URI)
+            name, mer, cer = LOF_INFO_DICT.get(code, (None, None, None))
             row = [
                 code,
                 name,
