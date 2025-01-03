@@ -255,11 +255,7 @@ async def bench_etf_history(
     else:
         # default is qdii
         sectors = [918, 1000056319000000, 1000056320000000, 1000056321000000, 1000056322000000]
-
-    placeholders = ",".join([str(s) for s in sectors])
-    with duckdb.connect(ETF_DB_URI, read_only=True) as conn:
-        query = f"SELECT DISTINCT code FROM bar1d WHERE sector IN ({placeholders}) AND dt BETWEEN ? AND ?"
-        code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
+    code_list = info.query_sector_codes(ETF_DB_URI, sectors)
 
     stgs = {
         code: strategy.GridCCI(
@@ -274,7 +270,7 @@ async def bench_etf_history(
         for code in code_list
     }
 
-    replayer = DuckBatchReplayer(start, end, sectors, ETF_DB_URI)
+    replayer = DuckBatchReplayer(start, end, code_list, ETF_DB_URI)
     for quote in replayer:
         stgs[quote.code].on_update(quote)
 
@@ -320,10 +316,7 @@ async def bench_lof_history(
     else:
         # default is qdii+commodity
         sectors = [1000043337000000, 1000043336000000]
-    placeholders = ",".join([str(s) for s in sectors])
-    with duckdb.connect(LOF_DB_URI, read_only=True) as conn:
-        query = f"SELECT DISTINCT code FROM bar1d WHERE sector IN ({placeholders}) AND dt BETWEEN ? AND ?"
-        code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
+    code_list = info.query_sector_codes(LOF_DB_URI, sectors)
 
     stgs = {
         code: strategy.GridCCI(
@@ -338,7 +331,7 @@ async def bench_lof_history(
         for code in code_list
     }
 
-    replayer = DuckBatchReplayer(start, end, sectors, LOF_DB_URI)
+    replayer = DuckBatchReplayer(start, end, code_list, LOF_DB_URI)
     for quote in replayer:
         stgs[quote.code].on_update(quote)
 
