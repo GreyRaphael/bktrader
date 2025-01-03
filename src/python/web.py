@@ -9,13 +9,11 @@ from fastapi import Depends, FastAPI, HTTPException, status, Request
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-import duckdb
 
 from bktrader import strategy
 from draw import backtest_history, backtest_realtime
 from quote.realtime import XueQiuQuote, EastEtfQuote, EastLofQuote
-from quote.history import DuckdbReplayer, DuckBatchReplayer
-from engine import BacktestEngine, TradeEngine
+from quote.history import DuckBatchReplayer
 from quote.fundtype import ETFType, LOFType
 from quote import info
 
