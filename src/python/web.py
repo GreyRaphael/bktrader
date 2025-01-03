@@ -327,19 +327,19 @@ async def bench_lof_history(
     xt: LOFType = "qdii",
 ):
     if LOFType.commodity == xt:
-        condition = "sector=1000043336000000"
+        sectors = [1000043336000000]
     elif LOFType.bond == xt:
-        condition = "sector=1000043335000000"
+        sectors = [1000043335000000]
     else:
-        # default is qdii
-        condition = "sector=1000043337000000"
+        # default is qdii+commodity
+        sectors = [1000043337000000, 1000043336000000]
+    placeholders = ", ".join(["?"] * len(sectors))
     with duckdb.connect(LOF_DB_URI, read_only=True) as conn:
-        query = f"SELECT DISTINCT code FROM bar1d WHERE {condition} AND dt BETWEEN ? AND ?"
-        code_list = [code[0] for code in conn.execute(query, [start, end]).fetchall()]
+        query = f"SELECT DISTINCT code FROM bar1d WHERE sector IN ({placeholders}) AND dt BETWEEN ? AND ?"
+        code_list = [code[0] for code in conn.execute(query, [*sectors, start, end]).fetchall()]
 
-    data = []
-    for code in code_list:
-        stg = strategy.GridCCI(
+    stgs = {
+        code: strategy.GridCCI(
             init_cash=1e5,
             cum_quantile=0.3,
             rank_period=15,
@@ -348,13 +348,20 @@ async def bench_lof_history(
             max_active_pos_len=25,
             profit_limit=profit / 1e2,
         )
-        replayer = DuckdbReplayer(start, end, code, LOF_DB_URI)
-        engine = BacktestEngine(replayer, stg)
-        engine.run()
+        for code in code_list
+    }
 
+    replayer = DuckBatchReplayer(start, end, sectors, LOF_DB_URI)
+    for quote in replayer:
+        stgs[quote.code].on_update(quote)
+
+    infos = query_info_all(LOF_DB_URI)
+    data = []
+    for code in stgs:
+        stg = stgs[code]
         (sharpe_annual, sharpe_volatility, sharpe_ratio) = stg.broker.analyzer.sharpe_ratio(0.015)
         (sortino_annual, sortino_volatility, sortino_ratio) = stg.broker.analyzer.sortino_ratio(0.015, 0.01)
-        name, mer, cer = query_info(code, LOF_DB_URI)
+        name, mer, cer = infos.get(code, (None, None, None))
         row = [
             code,
             name,
