@@ -37,6 +37,7 @@
         const dataSet = {{ available_json | safe }};
         new DataTable('#availableTable', {
             paging: false,
+            order: [[12, 'desc'], [8, 'desc'],],
             columns: [
                 {
                     title: 'code',
