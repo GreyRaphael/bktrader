@@ -207,7 +207,7 @@ def draw_candles_with_markers(quotes: list[tuple], positions: list, title: str =
     # grid_chart = Grid(init_opts=opts.InitOpts(width="100%", height="700px", theme="vintage"))  # for jupyter debug
     grid_chart = Grid(init_opts=opts.InitOpts(width="100%", height="700px"))
     grid_chart.add(kline_with_markers, grid_opts=opts.GridOpts(pos_left="1%", pos_top="5%", pos_right="0.5%", height="70%", is_contain_label=True))  # is_contain_label 始终让label在里面
-    grid_chart.add(vol_bars, grid_opts=opts.GridOpts(pos_left="1%", pos_top="75%", pos_right="0.5%", height="15%"))
+    grid_chart.add(vol_bars, grid_opts=opts.GridOpts(pos_left="2%", pos_top="75%", pos_right="0.5%", height="15%"))
 
     return grid_chart
 
