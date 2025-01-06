@@ -6,6 +6,7 @@ pub mod ma;
 pub mod momentum;
 pub mod rolling;
 pub mod volatility;
+pub mod savgol;
 
 pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let ta = PyModule::new(parent_module.py(), "ta")?;
@@ -36,5 +37,6 @@ pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     ta.add_class::<volatility::NATR>()?;
     ta.add_class::<momentum::CCI>()?;
     ta.add_class::<momentum::KDJ>()?;
+    ta.add_class::<savgol::Savgol>()?;
     parent_module.add_submodule(&ta)
 }
