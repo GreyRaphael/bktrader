@@ -42,6 +42,7 @@ fn factorial(n: usize) -> usize {
 /// * `polyorder` - The order of the polynomial to fit.
 /// * `deriv` - The derivative to compute (default is 0).
 /// * `delta` - The spacing between samples (default is 1.0).
+/// * `pos` - if pos=0, after dot operation, it will be slope at pos=0; if pos=window_length-1, it will be slope at pos=window_length-1
 ///
 /// # Returns
 /// A vector of filter coefficients
