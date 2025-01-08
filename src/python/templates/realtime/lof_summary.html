@@ -11,33 +11,14 @@
 
 <body>
     <div class="container">
-        <table id="availableTable" class="display" style="width:100%">
-            <thead>
-                <tr>
-                    <th>code</th>
-                    <th>name</th>
-                    <th>mer</th>
-                    <th>cer</th>
-                    <th>portfolio_profit</th>
-                    <th>max_drawdown</th>
-                    <th>sharpe_annual</th>
-                    <th>sharpe_volatility</th>
-                    <th>sharpe_ratio</th>
-                    <th>sortino_annual</th>
-                    <th>sortino_volatility</th>
-                    <th>sortino_ratio</th>
-                    <th>sortino_ratio</th>
-                    <th>sortino_ratio</th>
-                </tr>
-            </thead>
-        </table>
+        <table id="availableTable" class="display" style="width:100%"></table>
     </div>
 
     <script>
         const dataSet = {{ available_json | safe }};
         new DataTable('#availableTable', {
             paging: false,
-            order: [[12, 'desc'], [8, 'desc'],],
+            order: [[2, 'desc'], [10, 'desc'],],
             columns: [
                 {
                     title: 'code',
@@ -49,6 +30,8 @@
                     }
                 },
                 { title: 'name' },
+                { title: 'entry_dt' },
+                { title: 'exit_dt' },
                 { title: 'mer' },
                 { title: 'cer' },
                 { title: 'portfolio_profit' },
@@ -59,8 +42,6 @@
                 { title: 'sortino_annual.' },
                 { title: 'sortino_volatility' },
                 { title: 'sortino_ratio' },
-                { title: 'entry_dt' },
-                { title: 'exit_dt' },
             ],
             data: dataSet
         });

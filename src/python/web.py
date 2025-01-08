@@ -404,6 +404,8 @@ async def etf_available(
             row = [
                 code,
                 name,
+                (dt.date(1970, 1, 1) + dt.timedelta(days=last_position.entry_dt)).isoformat() if last_position.entry_dt else None,
+                (dt.date(1970, 1, 1) + dt.timedelta(days=last_position.exit_dt)).isoformat() if last_position.exit_dt else None,
                 mer,
                 cer,
                 round(stg.broker.profit_net(), 3),
@@ -414,8 +416,6 @@ async def etf_available(
                 round(sortino_annual, 3),
                 round(sortino_volatility, 3),
                 round(sortino_ratio, 3),
-                (dt.date(1970, 1, 1) + dt.timedelta(days=last_position.entry_dt)).isoformat() if last_position.entry_dt else None,
-                (dt.date(1970, 1, 1) + dt.timedelta(days=last_position.exit_dt)).isoformat() if last_position.exit_dt else None,
             ]
             data.append(row)
 
@@ -467,6 +467,8 @@ async def lof_available(
             row = [
                 code,
                 name,
+                (dt.date(1970, 1, 1) + dt.timedelta(days=last_position.entry_dt)).isoformat() if last_position.entry_dt else None,
+                (dt.date(1970, 1, 1) + dt.timedelta(days=last_position.exit_dt)).isoformat() if last_position.exit_dt else None,
                 mer,
                 cer,
                 round(stg.broker.profit_net(), 3),
@@ -477,8 +479,6 @@ async def lof_available(
                 round(sortino_annual, 3),
                 round(sortino_volatility, 3),
                 round(sortino_ratio, 3),
-                (dt.date(1970, 1, 1) + dt.timedelta(days=last_position.entry_dt)).isoformat() if last_position.entry_dt else None,
-                (dt.date(1970, 1, 1) + dt.timedelta(days=last_position.exit_dt)).isoformat() if last_position.exit_dt else None,
             ]
             data.append(row)
 
