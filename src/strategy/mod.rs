@@ -12,5 +12,6 @@ pub fn register(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     strategy.add_class::<dmac::DMAStrategy>()?;
     strategy.add_class::<qdii::GridCCI>()?;
     strategy.add_class::<sav::SavStg>()?;
+    strategy.add_class::<sav::SavStgD>()?;
     parent_module.add_submodule(&strategy)
 }
