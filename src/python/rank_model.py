@@ -5,6 +5,8 @@ import polars as pl
 from scipy import signal
 import datetime as dt
 
+pl.Config.set_tbl_rows(20)
+
 
 def prepare_savgol(window_length, polyorder=2) -> tuple:
     s_deriv1 = pl.Series(signal.savgol_coeffs(window_length, polyorder, deriv=1, delta=1, pos=window_length - 1, use="dot"))
@@ -19,9 +21,7 @@ def query_sector_codes(uri: str, sectors: list[int]) -> list[int]:
     return [record[0] for record in records]
 
 
-# codes = query_sector_codes("etf.db", [918, 1000056319000000, 1000056320000000, 1000056321000000, 1000056322000000])
-# codes = query_sector_codes("etf.db", [1000056319000000]) + [510050]
-codes = query_sector_codes("etf.db", [1000056319000000])
+codes = query_sector_codes("etf.db", [918, 1000056319000000, 1000056320000000, 1000056321000000, 1000056322000000])
 print("code length", len(codes))
 
 
@@ -50,7 +50,7 @@ def prepare_features(uri: str, codes: list[int], ret_days=5):
     FROM
         bar1d
     WHERE
-        code IN ({placeholders}) AND dt > '2020-01-01'
+        code IN ({placeholders})
     ORDER BY
         code ASC, dt ASC
     """,
@@ -59,7 +59,6 @@ def prepare_features(uri: str, codes: list[int], ret_days=5):
             .pl()
             .select(pl.exclude("vwap"))
             .drop_nulls()
-            .drop_nans()
         )
 
 
@@ -79,10 +78,13 @@ dfx = (
         pl.col("odp").rolling_map(lambda s: s.dot(s_deriv1), window_size=win).over("code").alias("odp_deriv1"),
         pl.col("tr").rolling_map(lambda s: s.dot(s_deriv1), window_size=win).over("code").alias("tr_deriv1"),
         pl.col("turnover").rolling_map(lambda s: s.dot(s_deriv1), window_size=win).over("code").alias("turnover_deriv1"),
-        pl.col("ret5").rank(method="ordinal").over("dti").alias("rank"),
+        (pl.col("ret5").rank(method="ordinal") - 1).over("dti").alias("rank"),
     )
-    .sort(by=["dti", "code"])
-    .select(pl.exclude("adjvwap", "adjvol", "ret5", "code"))
+    .with_columns(
+        (pl.col("rank") / pl.max("rank").over("dti") * 30).round().cast(pl.UInt32).alias("label"),
+    )
+    .sort("dti")
+    .select(pl.exclude("adjvwap", "adjvol", "ret5", "code", "rank"))
     .drop_nulls()
     .filter(~pl.any_horizontal(pl.all().is_infinite()))
 )
@@ -91,11 +93,11 @@ dfx = (
 def split_dataset(dataset: pl.DataFrame, split_date: dt.date):
     train_data = dataset.filter(pl.col("dti").cast(pl.Date) < split_date)
     test_data = dataset.filter(pl.col("dti").cast(pl.Date) >= split_date)
-    X_train = train_data.select(pl.exclude("rank", "dti")).to_pandas()
-    y_train = train_data["rank"].to_pandas()
+    X_train = train_data.select(pl.exclude("label", "dti")).to_pandas()
+    y_train = train_data["label"].to_pandas()
     train_groups_val = train_data.group_by("dti", maintain_order=True).len()["len"].to_pandas()
-    X_test = test_data.select(pl.exclude("rank", "dti")).to_pandas()
-    y_test = test_data["rank"].to_pandas()
+    X_test = test_data.select(pl.exclude("label", "dti")).to_pandas()
+    y_test = test_data["label"].to_pandas()
     test_groups_val = test_data.group_by("dti", maintain_order=True).len()["len"].to_pandas()
     return X_train, X_test, y_train, y_test, train_groups_val, test_groups_val
 
@@ -106,7 +108,6 @@ X_train, X_test, y_train, y_test, train_groups_val, test_groups_val = split_data
 model = AutoML()
 model.fit(X_train, y_train, groups=train_groups_val, task="rank", time_budget=30, verbose=False)
 
-# show stat
 print(f"train: {1 - model.best_loss:.4f}")
 importances = {}
 for name, importance in zip(model.feature_names_in_.tolist(), model.feature_importances_.tolist()):
@@ -115,5 +116,4 @@ for k, v in sorted(importances.items(), key=lambda item: item[1], reverse=True):
     print(f"{k:10}: {v:.4f}")
 
 y_pred = model.predict(X_test)
-
 metrics.ndcg_score([y_test], [y_pred])
