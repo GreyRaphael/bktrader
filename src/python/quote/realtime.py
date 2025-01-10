@@ -90,6 +90,9 @@ class EastEtfQuote:
             update_time = dt.datetime.fromtimestamp(record["f124"])  # run after 14:00
             time_ratio = predicted_close_ratio(update_time)
 
+            if isinstance(record["f5"], str):
+                continue
+
             predicted_today_volume = record["f5"] * 1e2 / time_ratio  # 1e2单位手换算成股
             predicted_today_amount = record["f6"] / time_ratio
 
