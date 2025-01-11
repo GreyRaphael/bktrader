@@ -95,25 +95,27 @@ def split_dataset(dataset: pl.DataFrame, split_date: dt.date):
     test_data = dataset.filter(pl.col("dti").cast(pl.Date) >= split_date)
     X_train = train_data.select(pl.exclude("label", "dti")).to_pandas()
     y_train = train_data["label"].to_pandas()
-    train_groups_val = train_data.group_by("dti", maintain_order=True).len()["len"].to_pandas()
+    train_groups = train_data["dti"].to_pandas()
     X_test = test_data.select(pl.exclude("label", "dti")).to_pandas()
     y_test = test_data["label"].to_pandas()
-    test_groups_val = test_data.group_by("dti", maintain_order=True).len()["len"].to_pandas()
-    return X_train, X_test, y_train, y_test, train_groups_val, test_groups_val
+    test_groups = test_data["dti"].to_pandas()
+    return X_train, X_test, y_train, y_test, train_groups, test_groups
 
 
 split_date = dt.date(2024, 8, 1)
-X_train, X_test, y_train, y_test, train_groups_val, test_groups_val = split_dataset(dfx, split_date)
+X_train, X_test, y_train, y_test, train_groups, test_groups = split_dataset(dfx, split_date)
 
 model = AutoML()
-model.fit(X_train, y_train, groups=train_groups_val, task="rank", time_budget=30, verbose=False)
+model.fit(X_train, y_train, groups=train_groups, task="rank", time_budget=30, verbose=False)
 
-print(f"train: {1 - model.best_loss:.4f}")
+print(f"best model: {model.best_estimator}, train score: {1 - model.best_loss:.4f}")
 importances = {}
+importances_sum = 0
 for name, importance in zip(model.feature_names_in_.tolist(), model.feature_importances_.tolist()):
     importances[name] = importance
-for k, v in sorted(importances.items(), key=lambda item: item[1], reverse=True):
-    print(f"{k:10}: {v:.4f}")
+    importances_sum += importance
+for name, importance in sorted(importances.items(), key=lambda item: item[1], reverse=True):
+    print(f"{name:10}: {importance / importances_sum:.4f}")
 
 y_pred = model.predict(X_test)
-metrics.ndcg_score([y_test], [y_pred])
+print("test score:", metrics.ndcg_score([y_test], [y_pred]))
