@@ -68,7 +68,7 @@ def prepare_dataset(uri: str, start_dt: dt.date, end_dt: dt.date, codes: list[in
             pl.col("odp").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("odp_deriv1"),
             pl.col("tr").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("tr_deriv1"),
             pl.col("turnover").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("turnover_deriv1"),
-            ((pl.col("ret5") - pl.min("ret5").over("dti")) / (pl.max("ret5").over("dti") - pl.min("ret5").over("dti")) * 30).cast(pl.UInt32).alias("label"),
+            ((pl.col("ret5") - pl.min("ret5").over("dti")) / (pl.max("ret5").over("dti") - pl.min("ret5").over("dti")) * 30).round().cast(pl.UInt32).alias("label"),
         )
         .sort("dti")
         .select(pl.exclude("vwap", "adjvwap", "adjvol", f"ret{predict_days}", "code", "rank"))
