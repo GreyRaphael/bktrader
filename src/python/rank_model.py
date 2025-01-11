@@ -23,8 +23,9 @@ def query_sector_codes(uri: str, sectors: list[int]) -> list[int]:
 def prepare_dataset(uri: str, start_dt: dt.date, end_dt: dt.date, codes: list[int], history_days=15, predict_days=5) -> pl.DataFrame:
     with duckdb.connect(uri, read_only=True) as con:
         placeholders = ",".join([str(c) for c in codes])
-        df = con.execute(
-            f"""
+        df = (
+            con.execute(
+                f"""
     SELECT
         code,
         date_diff('day', DATE '1970-01-01', dt) as dti,
@@ -48,8 +49,11 @@ def prepare_dataset(uri: str, start_dt: dt.date, end_dt: dt.date, codes: list[in
     ORDER BY
         code ASC, dt ASC
     """,
-            [predict_days, start_dt, end_dt],
-        ).pl()
+                [predict_days, start_dt, end_dt],
+            )
+            .pl()
+            .drop_nans()
+        )
 
     s_deriv1, s_deriv2 = prepare_savgol(history_days)
     return (
@@ -64,10 +68,7 @@ def prepare_dataset(uri: str, start_dt: dt.date, end_dt: dt.date, codes: list[in
             pl.col("odp").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("odp_deriv1"),
             pl.col("tr").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("tr_deriv1"),
             pl.col("turnover").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("turnover_deriv1"),
-            (pl.col(f"ret{predict_days}").rank(method="ordinal") - 1).over("dti").alias("rank"),
-        )
-        .with_columns(
-            (pl.col("rank") / pl.max("rank").over("dti") * 30).round().cast(pl.UInt32).alias("label"),
+            ((pl.col("ret5") - pl.min("ret5").over("dti")) / (pl.max("ret5").over("dti") - pl.min("ret5").over("dti")) * 30).cast(pl.UInt32).alias("label"),
         )
         .sort("dti")
         .select(pl.exclude("vwap", "adjvwap", "adjvol", f"ret{predict_days}", "code", "rank"))
@@ -110,6 +111,7 @@ if __name__ == "__main__":
     codes = query_sector_codes("etf.db", [918, 1000056319000000, 1000056320000000, 1000056321000000, 1000056322000000])
     dataset = prepare_dataset("etf.db", start_dt, end_dt, codes, history_days=15, predict_days=5)
     train_df, X_test, y_test, train_groups, test_groups = split_dataset(dataset, split_date)
+    print(f"train shape:{train_df.shape[0]}, test shape: {y_test.shape[0]}")
 
     model = AutoML()
     model.fit(dataframe=train_df, label="label", groups=train_groups, task="rank", time_budget=30, verbose=True)
