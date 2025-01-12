@@ -89,7 +89,10 @@ def split_dataset(dataset: pl.DataFrame, split_date: dt.date):
 
 
 def print_importances(model):
+    for name, loss in model.best_loss_per_estimator.items():
+        print(f"{name} score: {1 - loss:.4f}")
     print(f"===>best model: {model.best_estimator}, train score: {1 - model.best_loss:.4f}")
+
     importances = {}
     importances_sum = 0
     for name, importance in zip(model.feature_names_in_.tolist(), model.feature_importances_.tolist()):
@@ -97,6 +100,7 @@ def print_importances(model):
         importances_sum += importance
     for name, importance in sorted(importances.items(), key=lambda item: item[1], reverse=True):
         print(f"{name:10}: {importance / importances_sum:.4f}")
+    print(f"===>time to find best model: {model.time_to_find_best_model:.2f} s")
 
 
 if __name__ == "__main__":
@@ -114,7 +118,7 @@ if __name__ == "__main__":
     print(f"train shape:{train_df.shape[0]}, test shape: {y_test.shape[0]}")
 
     model = AutoML()
-    model.fit(dataframe=train_df, label="label", groups=train_groups, task="rank", time_budget=30, verbose=True)
+    model.fit(dataframe=train_df, label="label", groups=train_groups, task="rank", time_budget=10, verbose=True)
     print_importances(model)
 
     y_pred = model.predict(X_test)
