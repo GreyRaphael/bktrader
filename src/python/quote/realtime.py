@@ -157,6 +157,7 @@ class EastLofQuote:
             "f2": "last",
             "f5": "volume",
             "f6": "amount",
+            "f38": "unit_tot",
             "f124": "update_time",
         }
         self.latest_bars = {}
@@ -217,6 +218,7 @@ class EastLofQuote:
                 record["f2"],  # last
                 predicted_today_volume,  # volume
                 predicted_today_amount,  # amount
+                predicted_today_volume / record["f38"],  # predicted turnover
             )
 
     def get_quotes(self) -> list[datatype.Bar]:
@@ -226,7 +228,7 @@ class EastLofQuote:
 
         bars = []
         for code, duck_last_close, factor in records:
-            _, dt, preclose, open, high, low, last, predicted_vol, predicted_amt = self.latest_bars[code]
+            _, dt, preclose, open, high, low, last, predicted_vol, predicted_amt, predicted_turnover = self.latest_bars[code]
             adjfactor = factor if math.isclose(duck_last_close, preclose) else duck_last_close / preclose * factor
             bars.append(
                 datatype.Bar(
@@ -239,6 +241,7 @@ class EastLofQuote:
                     close=round(last * adjfactor, 3),
                     volume=predicted_vol,
                     amount=round(predicted_amt * adjfactor, 3),
+                    turnover=predicted_turnover,
                 )
             )
         return bars
