@@ -69,6 +69,7 @@ def prepare_dataset(uri: str, start_dt: dt.date, end_dt: dt.date, codes: list[in
             pl.col("odp").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("odp_deriv1"),
             pl.col("tr").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("tr_deriv1"),
             pl.col("turnover").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("turnover_deriv1"),
+            pl.col("turnover").rolling_map(lambda s: s.dot(s_deriv2), window_size=history_days).over("code").alias("turnover_deriv2"),
             ((pl.col(target_name) - pl.min(target_name).over("dti")) / (pl.max(target_name).over("dti") - pl.min(target_name).over("dti")) * 30).round().cast(pl.UInt32).alias("label"),
         )
         .sort("dti")
