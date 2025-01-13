@@ -21,8 +21,9 @@ def query_sector_codes(uri: str, sectors: list[int]) -> list[int]:
 
 
 def prepare_dataset(uri: str, start_dt: dt.date, end_dt: dt.date, codes: list[int], history_days=15, predict_days=5) -> pl.DataFrame:
+    placeholders = ",".join([str(c) for c in codes])
+    target_name = f"ret{predict_days}"
     with duckdb.connect(uri, read_only=True) as con:
-        placeholders = ",".join([str(c) for c in codes])
         df = (
             con.execute(
                 f"""
@@ -41,7 +42,7 @@ def prepare_dataset(uri: str, start_dt: dt.date, end_dt: dt.date, codes: list[in
         GREATEST((high-low)/preclose, ABS(high/preclose-1), ABS(low/preclose-1)) AS tr,
         STDDEV(tr) OVER (PARTITION BY code ORDER BY dt ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS tr_std20,
         turnover,
-        LEAD(adjvwap, ?) OVER (PARTITION BY code ORDER BY dt) / adjvwap as ret{predict_days},
+        LEAD(adjvwap, ?) OVER (PARTITION BY code ORDER BY dt) - adjvwap AS {target_name},
     FROM
         bar1d
     WHERE
@@ -68,10 +69,10 @@ def prepare_dataset(uri: str, start_dt: dt.date, end_dt: dt.date, codes: list[in
             pl.col("odp").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("odp_deriv1"),
             pl.col("tr").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("tr_deriv1"),
             pl.col("turnover").rolling_map(lambda s: s.dot(s_deriv1), window_size=history_days).over("code").alias("turnover_deriv1"),
-            ((pl.col("ret5") - pl.min("ret5").over("dti")) / (pl.max("ret5").over("dti") - pl.min("ret5").over("dti")) * 30).round().cast(pl.UInt32).alias("label"),
+            ((pl.col(target_name) - pl.min(target_name).over("dti")) / (pl.max(target_name).over("dti") - pl.min(target_name).over("dti")) * 30).round().cast(pl.UInt32).alias("label"),
         )
         .sort("dti")
-        .select(pl.exclude("vwap", "adjvwap", "adjvol", f"ret{predict_days}", "code", "rank"))
+        .select(pl.exclude("vwap", "adjvwap", "adjvol", target_name, "code"))
         .drop_nulls()
         .filter(~pl.any_horizontal(pl.all().is_infinite()))
     )
